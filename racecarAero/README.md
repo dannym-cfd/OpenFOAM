@@ -16,6 +16,27 @@ side skirt, six roof-mounted vortex generators, engine intake, underbody
 diffuser strake, rear spoiler. Goal: steady-state Cd/Cl baseline, then a
 transient follow-up once the wake proved unsteady.
 
+## Geometry
+
+CAD source model (Fusion 360) for the CFD surface geometry.
+
+![Full side view of the race car CAD model, showing roofline, side intake vents, wheels, and rear wing](../assets/img/racecarAero-cad-side.png)
+
+*Side view: full profile, roofline, side intake vents, wheels, rear wing.*
+
+![Front view of the race car CAD model, showing the hood, windshield, and front splitter/vent](../assets/img/racecarAero-cad-front.png)
+
+*Front view: hood, windshield, front splitter/vent detail.*
+
+![Rear view of the race car CAD model, showing the rear wing, wheel, and side vent](../assets/img/racecarAero-cad-rear.png)
+
+*Rear view: rear wing profile, wheel, side vent.*
+
+![Underbody view of the race car CAD model, showing the floor, diffuser, and mounting bosses](../assets/img/racecarAero-cad-underbody.png)
+
+*Underbody: floor and diffuser surface, mounting bosses for suspension
+hardpoints.*
+
 ## Methodology
 
 ### Flow conditions & turbulence
