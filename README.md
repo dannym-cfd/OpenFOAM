@@ -25,7 +25,7 @@ compressible `sonicFoam` solve. Result: **Cd 0.0310**, near-zero
 lift/side-force/moments as expected for an axisymmetric body at zero angle
 of attack. Details: [case study](superSonic/).
 
-![Pressure field on the coarse mesh showing the bow shock envelope around the missile](assets/img/missile-coarse-pressure.jpg)
+![Schlieren-style rendering of the missile in supersonic flight showing the bow shock cone](assets/img/missile-shock-render.jpg)
 
 ## Workstation
 
