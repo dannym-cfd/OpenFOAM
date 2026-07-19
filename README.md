@@ -3,10 +3,9 @@
 Static site with three CFD case studies (race car external aero, supersonic
 missile aero, Subaru Outback aero). Plain HTML/CSS, no build step.
 
-<p>
-  <img src="assets/img/racecarAero-streamline-render.jpg" alt="Streamline visualization over the race car, colored by surface pressure, on a black background" width="49%">
-  <img src="assets/img/missile-shock-render.jpg" alt="Schlieren-style rendering of the missile in supersonic flight showing the bow shock cone" width="49%">
-</p>
+![Streamline visualization over the race car, colored by surface pressure, on a black background](assets/img/racecarAero-streamline-render.jpg)
+
+![Schlieren-style rendering of the missile in supersonic flight showing the bow shock cone](assets/img/missile-shock-render.jpg)
 
 ## Publishing to GitHub Pages (free)
 
