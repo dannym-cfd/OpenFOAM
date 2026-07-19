@@ -35,6 +35,59 @@ Computes:
 The Mach 3.8115 / 15.77 km CFD condition above is a single point pulled from
 this model's output, not an arbitrary test case.
 
+### App layout
+
+Five tabs: Flight Path (trajectory, velocity/ground track, forces &
+atmospheric density), Aircraft Characteristics (CG migration, wing sweep,
+fin trim deflection), Engine (motor design + thrust/propellant-burn plots),
+Geometry (2D top-view animation), Data Table (full per-timestep output,
+right-click export to CSV).
+
+### Integration and CFD feedback loop
+
+Trajectory integration is RK4, replacing an earlier explicit-Euler scheme —
+Euler's numerical damping was under-predicting peak Mach (3.81 vs. RK4's
+4.3) and range during the high-thrust boost phase. `readLatestForceCoeffs.m`
+scans the OpenFOAM case's `postProcessing/forceCoeffs/` for the most
+recently written result and computes a calibration factor
+(`Cd_CFD / Cd_analytical`) applied to stage-1 drag. Since the CFD geometry
+covers the whole boosted stack (nose/fuselage/body fins/booster fins) with
+no separate glide-fin surface, the factor is applied only to those terms —
+an earlier version incorrectly scaled tail-fin drag with a factor never
+validated against it. Cl/CmPitch calibration is also read from CFD but
+skipped when the analytical baseline is ~0 (AoA=0 on a symmetric body),
+since the ratio is undefined there.
+
+### Motor model
+
+Solid rocket motor sized from a fixed CAD envelope (88mm OD × 1m length):
+wall thickness and material (Aluminum/Steel/Titanium/CarbonFiber/Fiberglass)
+set casing mass and remaining bore volume; propellant mass falls out of
+that bore volume × propellant density. Propellant type (APCP, double-base,
+black powder, HTPB/AP/Al) and nozzle expansion ratio drive an effective Isp
+via a nozzle-efficiency curve. This is a parametric approximation, not a
+real internal-ballistics model — no grain burn-area geometry, no
+chamber-pressure/burn-rate coupling.
+
+### Geometry rendering and debugging
+
+Nose, fuselage, and booster fins render from real STL outlines (sliced at
+the Y=0 plane, top-view, so a laterally-swept wing is actually visible
+rather than edge-on). The wing itself is a synthetic constant-chord
+rectangle driven by the same sweep formulas as the aero model — real-STL
+wing rotation was tried and reverted after it produced degenerate,
+flying-off shapes at large sweep angles, traced to rotating about a pivot
+that didn't match the STL's actual coordinate frame.
+
+Two behaviors that looked like bugs but weren't: the top-stage CG appeared
+to toggle between two fixed points instead of moving continuously with wing
+sweep, which turned out to be a real, continuous ~5mm shift on a ~965mm
+body — correct physics, just below the plot's visible resolution. Booster
+separation went through several corrections based on the real staging
+behavior (booster body and its fins jettison together as one unit at
+stage separation, not fins alone) before the drawing and the mass/CG
+physics in `simulateFlight.m` agreed.
+
 ## Methodology
 
 ### Flow conditions
