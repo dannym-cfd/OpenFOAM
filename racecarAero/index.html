@@ -1,16 +1,16 @@
 <title>Race Car External Aero — CFD Case Study</title>
 <meta name="description" content="GPU-accelerated half-car external aerodynamics: snappyHexMesh refinement strategy, AmgX GPU pressure solve, vortex generators, diffuser, and force coefficient results.">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="../assets/css/style.css">
 
 <nav class="topnav">
   <div class="topnav-inner">
     <span class="topnav-brand">CFD Case Studies</span>
     <div class="topnav-links">
-      <a href="index.html">Home</a>
-      <a href="racecarAero.html" class="current">Race Car Aero</a>
-      <a href="superSonic.html">Supersonic Missile</a>
-      <a href="subaruOutback.html">Subaru Outback</a>
+      <a href="../index.html">Home</a>
+      <a href="../racecarAero/" class="current">Race Car Aero</a>
+      <a href="../superSonic/">Supersonic Missile</a>
+      <a href="../subaruOutback/">Subaru Outback</a>
     </div>
   </div>
 </nav>
@@ -183,7 +183,7 @@
     </p>
 
     <figure class="shot">
-      <img src="assets/img/racecarAero-residuals.jpg" alt="Initial residuals vs simulated time for simpleFoam, showing U, p, k, and omega residual traces plateauing around t=200-1940 before a transient excursion near t=1950 that self-corrects.">
+      <img src="../assets/img/racecarAero-residuals.jpg" alt="Initial residuals vs simulated time for simpleFoam, showing U, p, k, and omega residual traces plateauing around t=200-1940 before a transient excursion near t=1950 that self-corrects.">
       <figcaption>
         Initial residuals vs. simulated time (simpleFoam). Residuals plateau
         rather than fully converging from t&asymp;200 onward &mdash; the
@@ -194,7 +194,7 @@
     </figure>
 
     <figure class="shot">
-      <img src="assets/img/racecarAero-velocity-pressure.jpg" alt="Velocity and pressure contour on the car's symmetry plane, showing stagnation pressure at the nose and a low-velocity wake region extending behind the car.">
+      <img src="../assets/img/racecarAero-velocity-pressure.jpg" alt="Velocity and pressure contour on the car's symmetry plane, showing stagnation pressure at the nose and a low-velocity wake region extending behind the car.">
       <figcaption>
         Velocity magnitude and pressure contours on the symmetry plane, from
         an earlier mesh iteration (predating the final vortex-generator
@@ -213,6 +213,6 @@
   </div>
 
   <footer class="sitefoot">
-    <a href="index.html">&larr; Back to all projects</a>
+    <a href="../index.html">&larr; Back to all projects</a>
   </footer>
 </div>

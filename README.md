@@ -35,17 +35,24 @@ GitHub Pages redeploys automatically on every push to `main`.
 ## Structure
 
 ```
-index.html            Home page — links to all 3 case studies
-racecarAero.html       Race car external aero case study
-superSonic.html        Supersonic missile aero case study
-subaruOutback.html     Subaru Outback aero case study
-assets/css/style.css   Shared stylesheet (light/dark aware)
-assets/img/            Curated, web-optimized result images (JPEG)
+index.html                Home page — links to all 3 case studies
+racecarAero/index.html    Race car external aero case study
+superSonic/index.html     Supersonic missile aero case study
+subaruOutback/index.html  Subaru Outback aero case study
+assets/css/style.css      Shared stylesheet (light/dark aware)
+assets/img/               Curated, web-optimized result images (JPEG)
 ```
+
+Each case study lives in its own folder as `index.html` rather than a flat
+`name.html` file, so GitHub Pages serves it at a clean folder URL (e.g.
+`/racecarAero/`) and the repo's file browser shows a folder instead of a raw
+`.html` file.
 
 ## Adding a new project page later
 
-Copy an existing case-study HTML file as a starting template (they all share
-the same section structure: header, headline stats, Problem & Goal,
-Methodology, Engineering Challenges, Results), update its nav links, and add
-a link to it from `index.html`'s project grid and every other page's nav bar.
+Copy an existing case-study folder (e.g. `racecarAero/`) as a starting
+template — they all share the same `index.html` section structure (header,
+headline stats, Problem & Goal, Methodology, Engineering Challenges,
+Results). Inside the new folder, update its nav links and the `../` asset
+paths, then add a link to it from `index.html`'s project grid and every
+other page's nav bar.
