@@ -43,6 +43,16 @@ fin trim deflection), Engine (motor design + thrust/propellant-burn plots),
 Geometry (2D top-view animation), Data Table (full per-timestep output,
 right-click export to CSV).
 
+![Flight Path tab showing trajectory (max altitude 31.2 km, distance 224.0 km), velocity/ground track, and active forces & atmospheric density plots](../assets/img/missileFlightApp-flightpath.png)
+
+*Flight Path tab: trajectory, Mach/ground-track history, and force/density
+history for the default launch parameters.*
+
+![Aircraft Characteristics tab showing dynamic CG migration, wing sweep vs flight path angle, and active flight trim deflection plots](../assets/img/missileFlightApp-aircraft-characteristics.png)
+
+*Aircraft Characteristics tab: CG migration, wing sweep angle vs. flight
+path angle, and fin trim deflection over the same flight.*
+
 ### Integration and CFD feedback loop
 
 Trajectory integration is RK4, replacing an earlier explicit-Euler scheme —
@@ -87,6 +97,17 @@ separation went through several corrections based on the real staging
 behavior (booster body and its fins jettison together as one unit at
 stage separation, not fins alone) before the drawing and the mass/CG
 physics in `simulateFlight.m` agreed.
+
+![Geometry tab, stage 1, showing the boosted stack top-view with stowed wing (90° sweep), booster fins, and engine plume at Mach 1.20](../assets/img/missileFlightApp-geometry-stage1.png)
+
+*Geometry tab, stage 1: full boosted stack, wing stowed (90° sweep) inside
+the fuselage, booster fins attached, engine plume rendered from
+instantaneous thrust.*
+
+![Geometry tab, stage 2, showing the glider alone with the wing swept out to 22.8° and the tail control fin deflected -3.9° at Mach 0.98](../assets/img/missileFlightApp-geometry-stage2.png)
+
+*Geometry tab, stage 2: booster (with its fins) jettisoned, wing swept out
+to 22.8°, tail fin trimmed to -3.9° at Mach 0.98.*
 
 ## Methodology
 
