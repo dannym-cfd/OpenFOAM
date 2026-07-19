@@ -102,4 +102,4 @@ and body, turbulent wake from the tail fins.*
 > ascent trajectory model, not picked as a round test number — the result
 > reflects a specific point in a modeled flight profile.
 
-[← Back to all projects](../README.md) · [Race Car Aero](../racecarAero/) · [Subaru Outback](../subaruOutback/)
+[← Back to all projects](../README.md) · [Race Car Aero](../racecarAero/)

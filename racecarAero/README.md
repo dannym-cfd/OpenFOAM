@@ -106,4 +106,4 @@ predating the final VG/diffuser/spoiler geometry.*
 > testing (4 hung, 8+ crashed with pinned-memory errors). Production ran at
 > 12 ranks across many sessions. Open risk, not resolved.
 
-[← Back to all projects](../README.md) · [Supersonic Missile](../superSonic/) · [Subaru Outback](../subaruOutback/)
+[← Back to all projects](../README.md) · [Supersonic Missile](../superSonic/)

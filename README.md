@@ -1,12 +1,10 @@
 # CFD Portfolio
 
-Three CFD case studies: race car external aero, supersonic missile aero,
-Subaru Outback aero. Each includes a technical writeup and the OpenFOAM
-case files.
+Two CFD case studies: race car external aero, supersonic missile aero. Each
+includes a technical writeup and the OpenFOAM case files.
 
 - [Race Car External Aero — GPU-Accelerated RANS/PIMPLE](racecarAero/)
 - [Supersonic Missile Aerodynamics — Mach 3.8115](superSonic/)
-- [Subaru Outback (2022) — Automotive External Aero](subaruOutback/)
 
 ## Race Car External Aero
 
