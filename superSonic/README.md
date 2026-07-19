@@ -212,65 +212,85 @@ kept mean Courant ≈0.00028 (max 0.364).
 
 #### Cells per refinement level
 
-<p>
-  <img src="../assets/img/missile-fine-cells-per-level.png" width="100%">
-</p>
+<table>
+<tr><th>Coarse mesh</th><th>Fine mesh</th></tr>
+<tr>
+<td><img src="../assets/img/missile-coarse-cells-per-level.png" width="100%"></td>
+<td><img src="../assets/img/missile-fine-cells-per-level.png" width="100%"></td>
+</tr>
+</table>
 
-*Fine mesh: cells per refinement level — level 8 dominates, consistent with
-611,508 of 1,232,688 total cells sitting at the finest level. (Coarse-mesh
-per-level breakdown not yet captured.)*
+*Coarse mesh tops out at refinement level 7; fine mesh reaches level 8,
+which dominates at 611,508 of 1,232,688 total cells (~50%).*
 
 | Metric | Coarse mesh | Fine mesh |
 |---|---|---|
 | Total cells | 175,166 | 1,232,688 |
-| Max refinement level | 6 | 8 |
-| Cells at max level | not captured | 611,508 (~50%) |
+| Max refinement level | 7 | 8 |
+| Cells at max level | ~75,000 (~43%) | 611,508 (~50%) |
 
 #### Layers per patch
 
-<p>
-  <img src="../assets/img/missile-fine-layers-per-patch.png" width="100%">
-</p>
+<table>
+<tr><th>Coarse mesh</th><th>Fine mesh</th></tr>
+<tr>
+<td><img src="../assets/img/missile-coarse-layers-per-patch.png" width="100%"></td>
+<td><img src="../assets/img/missile-fine-layers-per-patch.png" width="100%"></td>
+</tr>
+</table>
 
-*Fine mesh: target vs. achieved layer count and overall thickness coverage
-per patch. (Coarse-mesh equivalent not yet captured.)*
+*Coarse mesh only resolved layers on fuselage/bodyFins with low coverage
+(~16% fuselage, ~0% bodyFins); fine mesh reaches full three-patch coverage
+at 54–85%.*
 
-| Patch | Coarse target layers | Fine target layers | Fine achieved coverage |
-|---|---|---|---|
-| fuselage | 5 | 20 | 54% |
-| bodyFins | 3 | 12 | 85% |
-| boosterFins | 3 | 12 | 73% |
+| Patch | Coarse target layers | Coarse coverage | Fine target layers | Fine coverage |
+|---|---|---|---|---|
+| fuselage | 5 | ~16% | 20 | 54% |
+| bodyFins | 3 | ~0% | 12 | 85% |
+| boosterFins | — (not tracked) | — | 12 | 73% |
 
 #### Solver results
 
-Full-range solve logs, coarse mesh (left) vs. fine mesh (right):
+Full-range solve logs:
 
-<p>
-  <img src="../assets/img/missile-coarse-solver-timepacing.png" width="49%">
-  <img src="../assets/img/missile-fine-solver-timepacing.png" width="49%">
-</p>
+<table>
+<tr><th>Coarse mesh</th><th>Fine mesh</th></tr>
+<tr>
+<td><img src="../assets/img/missile-coarse-solver-timepacing.png" width="100%"></td>
+<td><img src="../assets/img/missile-fine-solver-timepacing.png" width="100%"></td>
+</tr>
+</table>
 
 *Time pacing: simulated time vs. wall-clock time, and cumulative average
 solve rate.*
 
-<p>
-  <img src="../assets/img/missile-coarse-residuals.png" width="49%">
-  <img src="../assets/img/missile-fine-solver-initial.png" width="49%">
-</p>
+<table>
+<tr><th>Coarse mesh</th><th>Fine mesh</th></tr>
+<tr>
+<td><img src="../assets/img/missile-coarse-residuals.png" width="100%"></td>
+<td><img src="../assets/img/missile-fine-solver-initial.png" width="100%"></td>
+</tr>
+</table>
 
 *Initial residuals per field.*
 
-<p>
-  <img src="../assets/img/missile-coarse-solver-final.png" width="49%">
-  <img src="../assets/img/missile-fine-solver-final.png" width="49%">
-</p>
+<table>
+<tr><th>Coarse mesh</th><th>Fine mesh</th></tr>
+<tr>
+<td><img src="../assets/img/missile-coarse-solver-final.png" width="100%"></td>
+<td><img src="../assets/img/missile-fine-solver-final.png" width="100%"></td>
+</tr>
+</table>
 
 *Final (post-inner-iteration) residuals per field.*
 
-<p>
-  <img src="../assets/img/missile-coarse-courant.png" width="49%">
-  <img src="../assets/img/missile-fine-solver-courant.png" width="49%">
-</p>
+<table>
+<tr><th>Coarse mesh</th><th>Fine mesh</th></tr>
+<tr>
+<td><img src="../assets/img/missile-coarse-courant.png" width="100%"></td>
+<td><img src="../assets/img/missile-fine-solver-courant.png" width="100%"></td>
+</tr>
+</table>
 
 *Mean/max Courant number.*
 
@@ -284,10 +304,13 @@ solve rate.*
 Coarse mesh was also solved across two separate sessions on the same case
 (run1/run2), compared directly:
 
-<p>
-  <img src="../assets/img/missile-coarse-residuals-compare-initial.png" width="49%">
-  <img src="../assets/img/missile-coarse-residuals-compare-final.png" width="49%">
-</p>
+<table>
+<tr><th>Coarse mesh — initial residuals</th><th>Coarse mesh — final residuals</th></tr>
+<tr>
+<td><img src="../assets/img/missile-coarse-residuals-compare-initial.png" width="100%"></td>
+<td><img src="../assets/img/missile-coarse-residuals-compare-final.png" width="100%"></td>
+</tr>
+</table>
 
 *Coarse mesh, run1 (solid) vs. run2 (dashed): initial residuals (left),
 final residuals (right).*
