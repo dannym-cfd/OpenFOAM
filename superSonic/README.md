@@ -219,15 +219,26 @@ final portion of the solve.*
 
 *Coarse mesh: mean/max Courant number over the same window.*
 
-![Fine mesh initial residuals, comparing run1 (solid) vs run2 (dashed) across two solve sessions](../assets/img/missile-fine-residuals-initial.png)
+![Coarse mesh initial residuals, comparing run1 (solid) vs run2 (dashed) across two solve sessions](../assets/img/missile-coarse-residuals-compare-initial.png)
 
-*Fine mesh: initial residuals per field, run1 (solid) vs. run2 (dashed) —
+*Coarse mesh: initial residuals per field, run1 (solid) vs. run2 (dashed) —
 two separate solve sessions on the same case.*
 
-![Fine mesh final residuals, comparing run1 (solid) vs run2 (dashed) across two solve sessions](../assets/img/missile-fine-residuals-final.png)
+![Coarse mesh final residuals, comparing run1 (solid) vs run2 (dashed) across two solve sessions](../assets/img/missile-coarse-residuals-compare-final.png)
 
-*Fine mesh: final (post-inner-iteration) residuals per field, same run1 vs.
-run2 comparison.*
+*Coarse mesh: final (post-inner-iteration) residuals per field, same run1
+vs. run2 comparison.*
+
+![Cells per refinement level on the fine mesh, showing level 8 as the dominant refinement level](../assets/img/missile-fine-cells-per-level.png)
+
+*Fine mesh: cells per refinement level — level 8 dominates, consistent with
+611,508 of 1,232,688 total cells sitting at the finest level.*
+
+![Target vs achieved boundary layers per patch on the fine mesh, and overall layer thickness coverage percentage per patch](../assets/img/missile-fine-layers-per-patch.png)
+
+*Fine mesh: target vs. achieved layer count and overall thickness coverage
+per patch — fuselage 54%, bodyFins 85%, boosterFins 73%, matching the
+55–86% range noted above.*
 
 ## Engineering Challenges
 
