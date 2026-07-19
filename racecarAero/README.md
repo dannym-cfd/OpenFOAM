@@ -96,6 +96,34 @@ highest coverage (~87–93%), the VGs and mirror the lowest (~35–48%).*
 cumulative average), and per-field initial/final residuals over the full
 t=0–2000 run.*
 
+## GPU Acceleration (AmgX)
+
+### Setup
+
+Pressure solved via **amgx4Foam + foam2csr** (direct AmgX integration).
+Chosen over `petsc4Foam` (an earlier approach — source still exists on disk
+but is unused). Requires a custom-built CUDA-aware OpenMPI, since the stock
+system OpenMPI has no CUDA support. AmgX config (`system/amgxpOptions`):
+AGGREGATION AMG preconditioner + PCG solver. `p` solver: `amgx`, tolerance
+1e-7, relTol 0.05, matrix caching set to update every solve.
+
+### Problems & solutions
+
+- **Rank-count reliability is an open, unresolved risk, not a fixed bug.**
+  Isolated testing only formally validated **2 MPI ranks** as reliable — 4
+  ranks hung, 8+ crashed with pinned-memory errors. That was never actually
+  solved; production simply runs at **12 ranks** across many sessions
+  without incident. This gap between "formally validated" and "empirically
+  working" is tracked as a known risk to watch for if a new hang/crash shows
+  up at high rank counts, not something to assume is fixed.
+- **Ctrl+C wedges the GPU driver.** Killing a running AmgX solve with an
+  abrupt SIGINT left the GPU driver in a wedged state (unkillable D-state
+  processes, `nvidia-smi` hangs), requiring a full `wsl --shutdown` to
+  recover — this happened multiple times before the fix below. **Fix**:
+  added a `-stop` flag to `Allsolve` that sets `stopAt writeNow` via
+  `runTimeModifiable` — the solver finishes its current timestep and exits
+  through AmgX/CUDA's normal shutdown path instead of being killed mid-solve.
+
 ## Engineering Challenges
 
 - **Mismatched refinement levels between adjacent patches crash the
