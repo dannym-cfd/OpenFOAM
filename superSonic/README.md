@@ -232,14 +232,22 @@ Drag splits evenly forward/rear; lift/side-force/moment ≈ 0, as expected for
 an axisymmetric body at zero AoA. Cd holds at 0.0309–0.0310 (±0.0002) over
 the final ~0.0008 s.
 
-![Schlieren-style rendering of the missile in supersonic flight, showing the bow shock cone forming around the nose and body, and a turbulent wake shed from the tail fins.](../assets/img/missile-shock-render.jpg)
+Coarse-mesh field renders at the same t = 0.00492102 s:
 
-*Density/pressure-gradient visualization at Mach 3.8: bow shock off the nose
-and body, turbulent wake from the tail fins.*
+![Pressure field on the coarse mesh, showing the bow shock envelope around the nose, fuselage, and fins](../assets/img/missile-coarse-pressure.jpg)
 
-![Streamline visualization around the missile body showing flow deflection around the nose and fins.](../assets/img/missile-streamlines.jpg)
+*Pressure field (coarse mesh): shock envelope visible around the nose, body,
+and fins, freestream ≈1.5–4.6×10⁴ Pa scale.*
 
-*Streamlines around the nose, body, and fin geometry.*
+![Temperature field on the coarse mesh, showing shock heating along the body and wake](../assets/img/missile-coarse-temperature.jpg)
+
+*Temperature field (coarse mesh): freestream ≈210 K, shock-heated air along
+the body and wake reaching up to ≈970 K.*
+
+![Velocity magnitude and density field on the coarse mesh around the missile body](../assets/img/missile-coarse-velocity.jpg)
+
+*Velocity magnitude and density field (coarse mesh) around the body and
+wake.*
 
 > Flight condition (Mach/altitude) was read directly from a time-resolved
 > ascent trajectory model, not picked as a round test number — the result
