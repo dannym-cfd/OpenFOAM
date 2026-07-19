@@ -19,6 +19,50 @@ flight state. Flight condition taken from a point-mass ascent trajectory
 model (velocity, Mach, altitude, thrust, drag, stage, propellant mass,
 stability margin) at ~19 s into flight, mid first-stage burn.
 
+## Airframe & Avionics
+
+### Geometry details
+
+Body diameter 98 mm, total (glider-stage) mass 9180.43 g. Wing pivot at
+-494.5 mm from nose tip, control fins centered at -930.5 mm from nose tip.
+
+| Component | Airfoil | Chord | Span |
+|---|---|---|---|
+| Main wings (deployable) | NASA SC(2)-0710 | 85 mm | 300 mm |
+| Control fins | NACA 0008 | 50 mm | 100 mm |
+
+Wing deployment: fully retracted → deployed, max actuator rate 15°/s,
+starting from a Mach 2 deployment condition.
+
+**Nose cone**: Von Kármán ogive (Haack series, C = 0 — the minimum-drag
+profile for a given length/base diameter under supersonic slender-body
+theory). Base radius 49 mm, fineness ratio L/D = 5 (L = 490 mm, adjustable
+parameter). Profile: θ = acos(1 − 2x/L), y = (R/√π)·√(θ − sin(2θ)/2 + C·sin³θ).
+
+CAD assembly (Fusion 360) of the full vehicle: nose, electronics bay,
+variable-sweep wing assembly, and booster.
+
+![Full two-stage stack, side view, showing nose, electronics bay with antenna fairings, swept wings, and booster with tail fins](../assets/img/missile-cad-fullstack.png)
+
+*Full stack, side view: nose, electronics bay (yellow band + antenna
+fairings), wings, booster body and tail fins.*
+
+![Second stage (glider) alone, front view, with wings deployed and no booster](../assets/img/missile-cad-topstage.png)
+
+*Second stage (glider) alone: nose, electronics bay, deployed wings, and the
+tail control-fin assembly — no booster or booster fins attached.*
+
+![Exploded view of the electronics bay module showing individual component blocks between the nose and booster](../assets/img/missile-cad-elecbay.png)
+
+*Electronics bay, exploded view. Sensor suite: LoRaWAN GPS tracker,
+MS5611-01BA03 barometric pressure sensor, Bosch BMI085 IMU (QFN), u-blox
+NEO-M9N-00B GNSS module (SMT).*
+
+![Close-up of the wing root showing the two linear actuators driving wing sweep](../assets/img/missile-cad-actuators.png)
+
+*Wing-sweep actuator mechanism at the wing root — two linear actuators per
+side driving the sweep motion `missileFlightApp` models as `sweep_deg`.*
+
 ## missileFlightApp (MATLAB)
 
 Custom MATLAB app used to size the flight condition simulated in this case.
@@ -115,50 +159,6 @@ instantaneous thrust.*
 
 *Geometry tab, stage 2: booster (with its fins) jettisoned, wing swept out
 to 22.8°, tail fin trimmed to -3.9° at Mach 0.98.*
-
-## Airframe & Avionics
-
-CAD assembly (Fusion 360) of the full vehicle: nose, electronics bay,
-variable-sweep wing assembly, and booster.
-
-![Full two-stage stack, side view, showing nose, electronics bay with antenna fairings, swept wings, and booster with tail fins](../assets/img/missile-cad-fullstack.png)
-
-*Full stack, side view: nose, electronics bay (yellow band + antenna
-fairings), wings, booster body and tail fins.*
-
-![Second stage (glider) alone, front view, with wings deployed and no booster](../assets/img/missile-cad-topstage.png)
-
-*Second stage (glider) alone: nose, electronics bay, deployed wings, and the
-tail control-fin assembly — no booster or booster fins attached.*
-
-![Exploded view of the electronics bay module showing individual component blocks between the nose and booster](../assets/img/missile-cad-elecbay.png)
-
-*Electronics bay, exploded view. Sensor suite: LoRaWAN GPS tracker,
-MS5611-01BA03 barometric pressure sensor, Bosch BMI085 IMU (QFN), u-blox
-NEO-M9N-00B GNSS module (SMT).*
-
-![Close-up of the wing root showing the two linear actuators driving wing sweep](../assets/img/missile-cad-actuators.png)
-
-*Wing-sweep actuator mechanism at the wing root — two linear actuators per
-side driving the sweep motion `missileFlightApp` models as `sweep_deg`.*
-
-### Geometry details
-
-Body diameter 98 mm, total (glider-stage) mass 9180.43 g. Wing pivot at
--494.5 mm from nose tip, control fins centered at -930.5 mm from nose tip.
-
-| Component | Airfoil | Chord | Span |
-|---|---|---|---|
-| Main wings (deployable) | NASA SC(2)-0710 | 85 mm | 300 mm |
-| Control fins | NACA 0008 | 50 mm | 100 mm |
-
-Wing deployment: fully retracted → deployed, max actuator rate 15°/s,
-starting from a Mach 2 deployment condition.
-
-**Nose cone**: Von Kármán ogive (Haack series, C = 0 — the minimum-drag
-profile for a given length/base diameter under supersonic slender-body
-theory). Base radius 49 mm, fineness ratio L/D = 5 (L = 490 mm, adjustable
-parameter). Profile: θ = acos(1 − 2x/L), y = (R/√π)·√(θ − sin(2θ)/2 + C·sin³θ).
 
 ## Methodology
 
