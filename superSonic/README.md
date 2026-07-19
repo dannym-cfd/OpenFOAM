@@ -79,6 +79,13 @@ via a nozzle-efficiency curve. This is a parametric approximation, not a
 real internal-ballistics model — no grain burn-area geometry, no
 chamber-pressure/burn-rate coupling.
 
+![Engine tab showing Motor Design panel (APCP propellant, aluminum wall, 20:1 nozzle expansion ratio, 3mm wall thickness, 8000N boost thrust) and Engine Thrust / Propellant Burn plots over the 20s burn](../assets/img/missileFlightApp-engine.png)
+
+*Engine tab: motor geometry/propellant inputs on the left (bore ID 82.0mm,
+9.242kg propellant, 2.163kg casing, 227.1s effective Isp for this
+configuration), thrust profile (8000N boost dropping to a lower sustain
+level) and propellant mass depletion over the 20.5s burn on the right.*
+
 ### Geometry rendering and debugging
 
 Nose, fuselage, and booster fins render from real STL outlines (sliced at
