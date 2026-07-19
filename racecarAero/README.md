@@ -60,6 +60,42 @@ Transient run used `maxCo 30` instead of `maxCo 1`: at `maxCo 1`, sub-mm
 near-wall cells Courant-limit the timestep to ≈8×10⁻⁶ s (2 s of physical
 time ≈ two weeks wall-clock). `maxCo 30` cut that by ~30×.
 
+### Convergence monitoring
+
+Final mesh generation (snappyHexMesh) result, clean checkMesh-equivalent
+(all checks 0, "Finished meshing without any errors"):
+
+| Metric | Value |
+|---|---|
+| Total cells | 3,799,277 |
+| Castellation refinement iterations | 9 |
+| Snapping iterations | 41 |
+| Layer addition iterations | 7 |
+
+![Cells per refinement level on the final racecarAero mesh, showing level 4 and level 7 as the dominant refinement levels](../assets/img/racecarAero-cells-per-level.png)
+
+*Cells per refinement level (final mesh): level 4 dominant, level 7 second.*
+
+![Target vs achieved boundary layers per patch across all racecarAero patches, and overall layer thickness coverage percentage per patch](../assets/img/racecarAero-layers-per-patch.png)
+
+*Target vs. achieved layers and thickness coverage across every patch
+(ground, body, wheels, mirror, front vent, side skirt, all six VGs,
+diffuser fin, rear spoiler) — diffuserFin and rearSpoiler achieve the
+highest coverage (~87–93%), the VGs and mirror the lowest (~35–48%).*
+
+<table>
+<tr><th>Time pacing</th><th>Initial residuals</th><th>Final residuals</th></tr>
+<tr>
+<td><img src="../assets/img/racecarAero-solver-timepacing.png" width="100%"></td>
+<td><img src="../assets/img/racecarAero-solver-initial.png" width="100%"></td>
+<td><img src="../assets/img/racecarAero-solver-final.png" width="100%"></td>
+</tr>
+</table>
+
+*simpleFoam solve: simulated time vs. wall-clock (~0.395 sim-s/wall-s
+cumulative average), and per-field initial/final residuals over the full
+t=0–2000 run.*
+
 ## Engineering Challenges
 
 - **Mismatched refinement levels between adjacent patches crash the
