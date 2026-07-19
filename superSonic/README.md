@@ -192,12 +192,42 @@ cells sit at the finest level, concentrated at the fins. Boundary layers
 reached 55–86% of target thickness by patch; mesh passed all quality checks,
 zero illegal faces.
 
+Mesh generation (snappyHexMesh) iteration counts and final checkMesh-equivalent
+result, both meshes clean (all checks 0, "Finished meshing without any errors"):
+
+| | Coarse mesh | Fine mesh |
+|---|---|---|
+| Castellation refinement iterations | 7 | 12 |
+| Snapping iterations | 41 | 41 |
+| Layer addition iterations | 27 | 11 |
+
 ### Solver strategy
 
 `sonicFoam`, Euler time stepping, bounded/TVD schemes for shocks/expansion
 fans. Decomposition: `scotch` (minimizes inter-processor boundaries on
 complex geometry), 12 cores, single workstation. Fixed 9×10⁻⁸ s timestep
 kept mean Courant ≈0.00028 (max 0.364).
+
+### Convergence monitoring
+
+![Coarse mesh residual history, zoomed to the final portion of the solve (0.023-0.03s simulated time)](../assets/img/missile-coarse-residuals.png)
+
+*Coarse mesh: initial residuals for Ux, Uy, Uz, e, p, epsilon, k over the
+final portion of the solve.*
+
+![Coarse mesh Courant number history, zoomed to the final portion of the solve](../assets/img/missile-coarse-courant.png)
+
+*Coarse mesh: mean/max Courant number over the same window.*
+
+![Fine mesh initial residuals, comparing run1 (solid) vs run2 (dashed) across two solve sessions](../assets/img/missile-fine-residuals-initial.png)
+
+*Fine mesh: initial residuals per field, run1 (solid) vs. run2 (dashed) —
+two separate solve sessions on the same case.*
+
+![Fine mesh final residuals, comparing run1 (solid) vs run2 (dashed) across two solve sessions](../assets/img/missile-fine-residuals-final.png)
+
+*Fine mesh: final (post-inner-iteration) residuals per field, same run1 vs.
+run2 comparison.*
 
 ## Engineering Challenges
 
