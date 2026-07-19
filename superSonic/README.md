@@ -10,12 +10,30 @@ two-mesh coarse-to-fine workflow for a 1.2M-cell compressible solve.
 
 ## Problem & Goal
 
-Compressible aero of a two-stage boosted missile at a supersonic condition:
+Compressible aero of a two-stage missile at a supersonic condition:
 converged drag coefficient, and confirmation that shock structure and
 near-zero lift/side-force/moments (axisymmetric body, zero AoA) are
-physical. Flight condition taken from a point-mass ascent trajectory model
-(velocity, Mach, altitude, thrust, drag, stage, propellant mass, stability
-margin) at ~19 s into flight, mid first-stage burn.
+physical. Stage 1: solid rocket motor sustainer (powered boost). Stage 2:
+unpropelled glide stage with variable-sweep wings, sweep angle set by
+flight state. Flight condition taken from a point-mass ascent trajectory
+model (velocity, Mach, altitude, thrust, drag, stage, propellant mass,
+stability margin) at ~19 s into flight, mid first-stage burn.
+
+## missileFlightApp (MATLAB)
+
+Custom MATLAB app used to size the flight condition simulated in this case.
+Point-mass trajectory model covering the full flight profile: loft
+trajectory, engine/sustainer burn, staging, and the unpropelled glide phase.
+Computes:
+
+- Maximum range for a given impact speed
+- Loft trajectory (altitude/velocity/Mach vs. time)
+- Staging events (sustainer burnout, second-stage separation)
+- Variable-sweep wing angle vs. flight state on the glide stage
+- Fin deflection angle
+
+The Mach 3.8115 / 15.77 km CFD condition above is a single point pulled from
+this model's output, not an arbitrary test case.
 
 ## Methodology
 
