@@ -1,0 +1,203 @@
+<title>Supersonic Missile Aerodynamics — CFD Case Study</title>
+<meta name="description" content="Mach 3.8 supersonic missile CFD: two-mesh coarse-to-fine field-mapping workflow, custom GPU linear-solver build, and force coefficient results.">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="assets/css/style.css">
+
+<nav class="topnav">
+  <div class="topnav-inner">
+    <span class="topnav-brand">CFD Case Studies</span>
+    <div class="topnav-links">
+      <a href="index.html">Home</a>
+      <a href="racecarAero.html">Race Car Aero</a>
+      <a href="superSonic.html" class="current">Supersonic Missile</a>
+      <a href="subaruOutback.html">Subaru Outback</a>
+    </div>
+  </div>
+</nav>
+
+<div class="page">
+
+  <div class="case-header">
+    <h1>Supersonic Missile Aerodynamics — Mach 3.8115</h1>
+    <p class="summary-line">
+      A two-stage boosted missile (nose, fuselage, body fins, booster fins)
+      simulated at a flight condition derived from a custom point-mass ascent
+      trajectory model, using a two-mesh coarse-to-fine workflow to make a
+      1.2M-cell compressible solve tractable.
+    </p>
+  </div>
+
+  <div class="headline-stats">
+    <div class="headline-stat"><div class="label">Mach</div><div class="value">3.8115</div></div>
+    <div class="headline-stat"><div class="label">Altitude</div><div class="value">15.77 km</div></div>
+    <div class="headline-stat"><div class="label">Cd</div><div class="value">0.0310</div></div>
+    <div class="headline-stat"><div class="label">Fine mesh</div><div class="value">1.23M cells</div></div>
+    <div class="headline-stat"><div class="label">Solver</div><div class="value">sonicFoam</div></div>
+  </div>
+
+  <section class="block">
+    <h2>Problem &amp; Goal</h2>
+    <p>
+      Compressible external aerodynamics of a two-stage boosted missile at a
+      supersonic flight condition, targeting a converged drag coefficient and
+      confirmation that the flow field (shock structure, near-zero
+      lift/side-force/moments for an axisymmetric body at zero angle of
+      attack) behaved physically. The flight condition itself wasn't picked
+      arbitrarily &mdash; it was read off a custom-built point-mass ascent
+      trajectory model (time-resolved velocity, Mach, altitude, thrust, drag,
+      stage, propellant mass, and stability margin), at roughly 19&nbsp;seconds
+      into flight, mid-way through first-stage burn.
+    </p>
+  </section>
+
+  <section class="block">
+    <h2>Methodology</h2>
+
+    <h3>Flow conditions</h3>
+    <ul>
+      <li>Mach 3.8115, freestream velocity 1124.9&nbsp;m/s, at 15.77&nbsp;km altitude (ISA stratosphere).</li>
+      <li>p<sub>&infin;</sub> = 10,663&nbsp;Pa, T<sub>&infin;</sub> = 216.65&nbsp;K, &rho;<sub>&infin;</sub> = 0.1714&nbsp;kg/m&sup3; &mdash; internally consistent via the ideal gas law to within rounding.</li>
+      <li>Inlet: <code>supersonicFreestream</code> boundary condition. Outlet and side boundaries: <code>inletOutlet</code> for U/T and <code>waveTransmissive</code> for p, a non-reflecting outflow treatment chosen specifically to avoid pressure-wave reflection back into the domain at supersonic speed.</li>
+      <li>Thermophysical model: <code>hePsiThermo</code> / <code>perfectGas</code>, standard air properties (Cp&nbsp;1005, &mu;&nbsp;1.8&times;10<sup>-5</sup>, Pr&nbsp;0.7).</li>
+      <li>Turbulence: RAS Launder-Sharma k-&epsilon;, a low-Reynolds-number variant appropriate for wall-resolved boundary layers rather than wall functions.</li>
+    </ul>
+
+    <h3>Two-mesh strategy</h3>
+    <p>
+      Rather than starting the expensive fine mesh from a uniform freestream
+      and burning through the initial shock-formation transient at full cost,
+      the workflow runs a coarse mesh first, then maps its result onto the
+      fine mesh:
+    </p>
+    <table class="data">
+      <tr><th></th><th class="num">Coarse mesh</th><th class="num">Fine mesh</th></tr>
+      <tr><td>Cells</td><td class="num">175,166</td><td class="num">1,232,688</td></tr>
+      <tr><td>Faces</td><td class="num">558,029</td><td class="num">3,856,056</td></tr>
+      <tr><td>Fin refinement level</td><td class="num">6</td><td class="num">8</td></tr>
+      <tr><td>Timestep</td><td class="num">4&times;10<sup>-7</sup> s</td><td class="num">9&times;10<sup>-8</sup> s</td></tr>
+      <tr><td>End time</td><td class="num">0.03 s</td><td class="num">0.005 s</td></tr>
+    </table>
+    <p>
+      A custom <code>coarsemap</code> script reconstructs the coarse case's
+      latest timestep and runs <code>mapFields -consistent</code> onto the
+      fine mesh, so the fine mesh inherits an already-established flow field
+      instead of starting cold. Over half the fine mesh's cells
+      (611,508 of 1,232,688) sit at the finest refinement level,
+      concentrated at the fins where the flow gradients are sharpest.
+      Boundary layers reached 55&ndash;86% of target thickness depending on
+      patch (fuselage lowest, body fins highest) &mdash; not fully at target
+      everywhere, but the mesh still passed all quality checks with zero
+      illegal faces in the final pass.
+    </p>
+
+    <h3>Solver strategy</h3>
+    <p>
+      <code>sonicFoam</code> (PISO-based compressible solver), Euler time
+      stepping, bounded/TVD convective schemes appropriate for strong
+      gradients near shocks and expansion fans. Decomposition used the
+      <code>scotch</code> method specifically because it minimizes
+      inter-processor boundaries automatically on complex
+      snappyHexMesh-generated geometry, run across 12 cores on a single
+      workstation. The fine-mesh run's fixed 9&times;10<sup>-8</sup>&nbsp;s
+      timestep, sized for stability at Mach 3.8 through the finest cells,
+      kept the mean Courant number down around 0.00028 (max 0.364) at the end
+      of the run.
+    </p>
+  </section>
+
+  <section class="block">
+    <h2>Engineering Challenges</h2>
+    <ul>
+      <li>
+        <strong>A GPU linear-solver stack was built, then not shipped.</strong>
+        Significant infrastructure was built from source in a dedicated
+        build tree: a CUDA-aware OpenMPI, PETSc (both standard and
+        CUDA-MPI variants), <code>petsc4Foam</code>, <code>foam2csr</code>,
+        and <code>amgx4Foam</code>, including patch scripts for known AmgX
+        integration bugs and single-rank validation tests. Despite that
+        effort, the production runs use OpenFOAM's native CPU
+        <code>DILUPBiCGStab</code> solver &mdash; no <code>libs</code> entry
+        for AmgX appears in the shipped <code>controlDict</code>. The GPU
+        path hit integration friction against this OpenFOAM version's API and
+        the robust, already-working CPU path was shipped instead of blocking
+        the result on it. (This is the same underlying GPU-solver
+        infrastructure that <em>did</em> get fully integrated on the race car
+        project &mdash; see that case study &mdash; so the effort wasn't
+        wasted, just not applicable to this solver in time.)
+      </li>
+      <li>
+        <strong>Solver choice pivoted mid-project.</strong>
+        An early setup used <code>rhoPimpleFoam</code> (transient PIMPLE with
+        adjustable local timestepping). The final case moved to
+        <code>sonicFoam</code> with a fixed, small timestep and explicit PISO
+        &mdash; a robustness/simplicity decision appropriate for a genuinely
+        supersonic (not merely transonic) flow regime, where the adjustable
+        local-timestepping approach added complexity without a clear benefit.
+      </li>
+      <li>
+        <strong>Mesh-quality issues were tracked down to specific cells, not just avoided.</strong>
+        An earlier meshing pass produced 9 illegal faces at identifiable cell
+        IDs; the final mesh generation pass resolved this cleanly (0 illegal
+        faces), rather than being patched over after the fact.
+      </li>
+    </ul>
+  </section>
+
+  <section class="block">
+    <h2>Results</h2>
+    <p>
+      Fine-mesh converged coefficients at t&nbsp;=&nbsp;0.00492102&nbsp;s (near
+      the 0.005&nbsp;s end time), reference values &rho;<sub>&infin;</sub> = 0.1714,
+      l<sub>ref</sub> = 1.974&nbsp;m (body length), A<sub>ref</sub> = 0.0791&nbsp;m&sup2;
+      (frontal area, body diameter &asymp; 0.317&nbsp;m):
+    </p>
+    <table class="data">
+      <tr><th>Coefficient</th><th class="num">Value</th></tr>
+      <tr><td>Cd (total)</td><td class="num">0.0310</td></tr>
+      <tr><td>Cd, forward half</td><td class="num">0.0155</td></tr>
+      <tr><td>Cd, rear half</td><td class="num">0.0155</td></tr>
+      <tr><td>Cl, Cs, Cm (pitch/roll/yaw)</td><td class="num">&asymp; 0 (as expected)</td></tr>
+    </table>
+    <p>
+      Drag splits almost exactly evenly between the forward and rear halves
+      of the body, and lift/side-force/moment coefficients are all
+      effectively zero &mdash; the expected result for an axisymmetric body at
+      zero angle of attack, and a useful sanity check that the simulation
+      setup (mesh symmetry, BCs) isn't introducing spurious asymmetric
+      forces. The time history over the final ~0.0008&nbsp;s of simulated
+      time shows Cd holding steady at 0.0309&ndash;0.0310 with only small
+      (&plusmn;0.0002) oscillation &mdash; a well-converged estimate, not a
+      single noisy snapshot.
+    </p>
+
+    <figure class="shot">
+      <img src="assets/img/missile-shock-render.jpg" alt="Schlieren-style rendering of the missile in supersonic flight, showing the bow shock cone forming around the nose and body, and a turbulent wake shed from the tail fins.">
+      <figcaption>
+        Density/pressure-gradient visualization of the Mach 3.8 flow field,
+        showing the bow shock forming off the nose and body, and turbulent
+        wake structure shed from the tail fins.
+      </figcaption>
+    </figure>
+
+    <figure class="shot">
+      <img src="assets/img/missile-streamlines.jpg" alt="Streamline visualization around the missile body showing flow deflection around the nose and fins.">
+      <figcaption>
+        Streamline visualization of the flow field around the nose, body,
+        and fin geometry.
+      </figcaption>
+    </figure>
+  </section>
+
+  <div class="callout">
+    <strong>On the flight condition:</strong> the Mach/altitude point used
+    for this CFD snapshot was read directly from a time-resolved ascent
+    trajectory model (velocity, Mach, altitude, thrust, drag, stage,
+    propellant mass, stability margin) rather than picked as a round test
+    number &mdash; the CFD result reflects a specific, physically modeled
+    moment in a realistic flight profile.
+  </div>
+
+  <footer class="sitefoot">
+    <a href="index.html">&larr; Back to all projects</a>
+  </footer>
+</div>

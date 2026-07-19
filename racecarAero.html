@@ -1,0 +1,218 @@
+<title>Race Car External Aero — CFD Case Study</title>
+<meta name="description" content="GPU-accelerated half-car external aerodynamics: snappyHexMesh refinement strategy, AmgX GPU pressure solve, vortex generators, diffuser, and force coefficient results.">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="assets/css/style.css">
+
+<nav class="topnav">
+  <div class="topnav-inner">
+    <span class="topnav-brand">CFD Case Studies</span>
+    <div class="topnav-links">
+      <a href="index.html">Home</a>
+      <a href="racecarAero.html" class="current">Race Car Aero</a>
+      <a href="superSonic.html">Supersonic Missile</a>
+      <a href="subaruOutback.html">Subaru Outback</a>
+    </div>
+  </div>
+</nav>
+
+<div class="page">
+
+  <div class="case-header">
+    <h1>Race Car External Aerodynamics — GPU-Accelerated RANS/PIMPLE</h1>
+    <p class="summary-line">
+      Half-car symmetry-plane simulation of a full aero package (vortex
+      generators, underbody diffuser, engine intake, sidepods) at 50&nbsp;m/s,
+      solved with OpenFOAM v2512 and a GPU-accelerated pressure solve.
+    </p>
+  </div>
+
+  <div class="headline-stats">
+    <div class="headline-stat"><div class="label">Cd</div><div class="value">0.278</div></div>
+    <div class="headline-stat"><div class="label">Cl</div><div class="value">-0.180</div></div>
+    <div class="headline-stat"><div class="label">Freestream</div><div class="value">50 m/s</div></div>
+    <div class="headline-stat"><div class="label">Turbulence</div><div class="value">k-&omega; SST</div></div>
+    <div class="headline-stat"><div class="label">Cores</div><div class="value">12</div></div>
+  </div>
+
+  <section class="block">
+    <h2>Problem &amp; Goal</h2>
+    <p>
+      Full external aerodynamic simulation of a race car half-model (symmetry
+      plane at X&nbsp;=&nbsp;0) at 50&nbsp;m/s (~180&nbsp;km/h), covering the
+      complete aero package rather than just a bare body: front/rear wheels
+      with rotating-wall boundary conditions, mirrors, a front splitter vent
+      and side skirt, six roof-mounted vortex generators, an engine intake
+      flow path, an underbody diffuser strake, and a rear spoiler spanning to
+      the symmetry plane. The goal was a credible steady-state drag/downforce
+      baseline (Cd/Cl), with a transient follow-up once the flow proved to
+      have a genuinely unsteady wake rather than a numerical artifact.
+    </p>
+  </section>
+
+  <section class="block">
+    <h2>Methodology</h2>
+
+    <h3>Flow conditions &amp; turbulence</h3>
+    <ul>
+      <li>Freestream 50&nbsp;m/s, k-&omega; SST turbulence model, nu&nbsp;=&nbsp;1.5&times;10<sup>-5</sup> m&sup2;/s.</li>
+      <li>Inlet: fixed velocity (0, 50, 0) — coordinate convention Y = streamwise, Z = vertical, X = lateral/symmetry.</li>
+      <li>Ground: moving-wall velocity matching freestream (correct relative-motion treatment for a stationary-frame car simulation).</li>
+      <li>Wheels: <code>rotatingWallVelocity</code>, &omega;&nbsp;=&nbsp;173.07&nbsp;rad/s at 50&nbsp;m/s, wheel radius 0.2889&nbsp;m.</li>
+      <li>Engine intake (<code>engsim.stl</code>): modeled as a flow-rate outlet (not a wall) at 0.392&nbsp;m&sup3;/s, derived from a generic 3.0L twin-turbo V6 assumption (7500&nbsp;rpm, 1.2&nbsp;bar boost, PR&asymp;2.2, 95% volumetric efficiency). Extraction direction was verified by inspecting the solved flux field directly (100% positive flux = genuine extraction, not injection) rather than assumed from the BC alone.</li>
+    </ul>
+
+    <h3>Mesh strategy</h3>
+    <p>
+      Built with snappyHexMesh across 12 parallel processes. Refinement
+      levels were tuned per-patch: body (4,5), wheels (5,6), mirror (6,6),
+      and everything else aerodynamically sensitive — front vent, side skirt,
+      all six vortex generators, engine intake blocker, diffuser fin, rear
+      spoiler — at a uniform (6,7) surface level, which was the proven-safe
+      ceiling for surface-level refinement on this geometry.
+    </p>
+    <p>
+      Level 8 refinement was needed locally at the vortex generators but
+      caused repeated snappyHexMesh crashes (segfaults in
+      <code>hexRef8::setRefinement</code>, heap corruption in
+      <code>addLayers</code>) whenever applied as a surface-level refinement.
+      The fix was to apply level 8 only through small dedicated volumetric
+      refinement boxes around each VG (~0.0004&ndash;0.0009&nbsp;m&sup3; each) instead
+      &mdash; never as a surface level. An early version used one large shared
+      box spanning all six VGs (~0.027&nbsp;m&sup3;, mostly empty roof space),
+      which is why cell counts briefly exploded; splitting it into six tight
+      individual boxes fixed that.
+    </p>
+    <p>
+      A y+ check on an early-iteration field showed all patches healthy: the
+      ground averaged y+&nbsp;&asymp;&nbsp;252 (down from 1594 before the ground got its
+      own boundary layers), and the vortex generators stayed well-behaved
+      (avg 33&ndash;131, max only 169&ndash;337, no near-wall instability).
+    </p>
+
+    <h3>Solver strategy</h3>
+    <p>
+      Two-stage approach: a steady RANS precursor (<code>simpleFoam</code>,
+      SIMPLEC/<code>consistent yes</code>, relaxation on U/k/omega only, no p
+      relaxation &mdash; matching OpenFOAM's own motorBike tutorial reference
+      settings rather than a guessed configuration) run to residual
+      plateau, followed by a transient PIMPLE run
+      (<code>pimpleFoam</code>, backward time scheme, 3 outer correctors) once
+      residual oscillation stopped decaying &mdash; the signature of a genuinely
+      unsteady wake rather than a numerics problem.
+    </p>
+    <p>
+      Pressure was solved on GPU via <strong>amgx4Foam</strong> (a direct
+      AmgX integration, not the PETSc AMGX wrapper), running over a
+      custom-built CUDA-aware OpenMPI, with an AGGREGATION AMG-preconditioned
+      PCG solver. The transient run used <code>maxCo&nbsp;30</code> rather than the
+      default-ish <code>maxCo&nbsp;1</code>: with sub-millimeter near-wall cells,
+      <code>maxCo&nbsp;1</code> Courant-limits the timestep down to
+      &asymp;8&times;10<sup>-6</sup>&nbsp;s, which would have made 2&nbsp;seconds of
+      physical time take roughly two weeks of wall-clock time. Letting
+      bulk-flow cells set the pace instead cut that by ~30&times;.
+    </p>
+  </section>
+
+  <section class="block">
+    <h2>Engineering Challenges</h2>
+    <ul>
+      <li>
+        <strong>Mismatched refinement levels between adjacent patches crash the mesher.</strong>
+        The engine intake blocker (<code>engSim</code>) sits spatially interleaved
+        with the side skirt. Dropping its refinement to save cells (it's just
+        a flat blocker) crashed snappyHexMesh at every lower level tried,
+        because the level mismatch against its (6,7)-level neighbor produced
+        bad transition cells. Fix: match neighboring patch levels exactly
+        rather than optimizing each patch in isolation.
+      </li>
+      <li>
+        <strong>Layer-addition parameters have narrow safe ranges.</strong>
+        Dropping <code>minThickness</code> from 0.1 to 0.05 (chasing better
+        layer coverage on the front vent) let near-degenerate, near-zero-height
+        cells through, which blew up omega's wall function
+        (&omega;&nbsp;~&nbsp;1/y) to ~10<sup>5</sup> from the very first
+        iteration and crashed the solver immediately. Separately, setting
+        <code>nGrow</code> to 1 (trying to close layer gaps at sharp edges)
+        caused a catastrophic layer-coverage collapse across nearly the whole
+        mesh, since it grows the do-not-extrude zone around every problem
+        spot and this geometry has too many separate thin/sharp trouble spots
+        for that not to cascade.
+      </li>
+      <li>
+        <strong>A plausible-sounding fix that didn't hold up under testing.</strong>
+        The hypothesis that volumetric refinement boxes would also improve
+        boundary-layer coverage (not just castellation) was tested directly
+        on five of the six vortex generators and found false &mdash; coverage
+        stayed at 13&ndash;19% regardless. The boxes were kept anyway for
+        castellation consistency, but the assumption was discarded rather
+        than carried forward unverified.
+      </li>
+      <li>
+        <strong>An early, badly-scaled BC produced a physically implausible result.</strong>
+        Before the engine intake velocity was corrected, an inflated value
+        (30&nbsp;m/s, roughly 3.2&times; too high) drove Cd to 0.702 and Cl to
+        -0.898 &mdash; the oversized intake was disrupting the local flow
+        field. Correcting the flow rate to the properly-derived
+        0.392&nbsp;m&sup3;/s (and fixing the reference area used for
+        coefficients) brought the result back in line with the converged
+        baseline below.
+      </li>
+    </ul>
+  </section>
+
+  <section class="block">
+    <h2>Results</h2>
+    <p>
+      Converged coefficients on the corrected-BC mesh (reference area
+      0.9314&nbsp;m&sup2;: 9187.988&nbsp;cm&sup2; half-model + 126&nbsp;cm&sup2;
+      wheel overhang):
+    </p>
+    <table class="data">
+      <tr><th>Coefficient</th><th class="num">Value</th></tr>
+      <tr><td>Cd</td><td class="num">0.278</td></tr>
+      <tr><td>Cl</td><td class="num">-0.180 (net downforce)</td></tr>
+    </table>
+    <p>
+      A large lateral force coefficient (Cs&nbsp;&asymp;&nbsp;-0.807) also
+      appeared in this result and was investigated on the assumption it might
+      be a bug &mdash; it wasn't. It's an expected artifact of the half-model
+      approach: a symmetric car's true side force is zero by construction, and
+      a half-model mesh with only one symmetry plane can't compute that
+      near-zero quantity meaningfully. Confirmed as artifact, not chased
+      further.
+    </p>
+
+    <figure class="shot">
+      <img src="assets/img/racecarAero-residuals.jpg" alt="Initial residuals vs simulated time for simpleFoam, showing U, p, k, and omega residual traces plateauing around t=200-1940 before a transient excursion near t=1950 that self-corrects.">
+      <figcaption>
+        Initial residuals vs. simulated time (simpleFoam). Residuals plateau
+        rather than fully converging from t&asymp;200 onward &mdash; the
+        signature that motivated the switch to a transient PIMPLE run &mdash;
+        with one large excursion around t&asymp;1941&ndash;1950 that
+        self-corrects.
+      </figcaption>
+    </figure>
+
+    <figure class="shot">
+      <img src="assets/img/racecarAero-velocity-pressure.jpg" alt="Velocity and pressure contour on the car's symmetry plane, showing stagnation pressure at the nose and a low-velocity wake region extending behind the car.">
+      <figcaption>
+        Velocity magnitude and pressure contours on the symmetry plane, from
+        an earlier mesh iteration (predating the final vortex-generator
+        repositioning and diffuser/spoiler geometry described above).
+      </figcaption>
+    </figure>
+  </section>
+
+  <div class="callout">
+    <strong>On the GPU solve:</strong> only 2 MPI ranks were ever formally
+    validated as fully reliable with AmgX in isolated testing (4 ranks hung,
+    8+ crashed with pinned-memory errors) &mdash; but the production case ran
+    reliably at 12 ranks across many sessions. That gap between "formally
+    validated" and "empirically working" is tracked as an open risk, not
+    treated as resolved.
+  </div>
+
+  <footer class="sitefoot">
+    <a href="index.html">&larr; Back to all projects</a>
+  </footer>
+</div>

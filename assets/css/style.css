@@ -1,0 +1,339 @@
+/* ---------------------------------------------------------------------- */
+/* CFD Portfolio — shared stylesheet                                      */
+/* ---------------------------------------------------------------------- */
+
+:root {
+  --bg: #0b0d10;
+  --bg-alt: #12151a;
+  --card: #161a20;
+  --border: #262b33;
+  --text: #e6e9ee;
+  --text-dim: #9aa4b2;
+  --accent: #5ec8ff;
+  --accent-dim: #2f6f8f;
+  --good: #6fd88a;
+  --warn: #e8b64a;
+  --code-bg: #0e1116;
+  --max-width: 880px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f7f8fa;
+    --bg-alt: #ffffff;
+    --card: #ffffff;
+    --border: #dde1e7;
+    --text: #1b1f24;
+    --text-dim: #565f6b;
+    --accent: #0b6fa8;
+    --accent-dim: #0b6fa8;
+    --good: #1a7d3a;
+    --warn: #8a5b00;
+    --code-bg: #eef1f4;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0b0d10;
+  --bg-alt: #12151a;
+  --card: #161a20;
+  --border: #262b33;
+  --text: #e6e9ee;
+  --text-dim: #9aa4b2;
+  --accent: #5ec8ff;
+  --accent-dim: #2f6f8f;
+  --good: #6fd88a;
+  --warn: #e8b64a;
+  --code-bg: #0e1116;
+}
+
+:root[data-theme="light"] {
+  --bg: #f7f8fa;
+  --bg-alt: #ffffff;
+  --card: #ffffff;
+  --border: #dde1e7;
+  --text: #1b1f24;
+  --text-dim: #565f6b;
+  --accent: #0b6fa8;
+  --accent-dim: #0b6fa8;
+  --good: #1a7d3a;
+  --warn: #8a5b00;
+  --code-bg: #eef1f4;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.6;
+}
+
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+code, .mono, .stat-value, .tag {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+/* --- Layout shell ------------------------------------------------------ */
+
+.page {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 1.5rem 4rem;
+}
+
+nav.topnav {
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-alt);
+}
+
+.topnav-inner {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0.9rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.topnav-brand {
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+
+.topnav-links {
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  font-size: 0.92rem;
+}
+
+.topnav-links a { color: var(--text-dim); }
+.topnav-links a:hover { color: var(--accent); }
+.topnav-links a.current { color: var(--accent); }
+
+/* --- Hero / home -------------------------------------------------------- */
+
+.hero {
+  padding: 3.5rem 0 1.5rem;
+}
+
+.hero h1 {
+  font-size: 2rem;
+  margin: 0 0 0.6rem;
+  letter-spacing: -0.01em;
+}
+
+.hero p.lede {
+  font-size: 1.08rem;
+  color: var(--text-dim);
+  max-width: 640px;
+  margin: 0 0 0.5rem;
+}
+
+.project-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.1rem;
+  margin-top: 2rem;
+}
+
+.project-card {
+  display: block;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.4rem 1.5rem;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.project-card:hover {
+  border-color: var(--accent-dim);
+  text-decoration: none;
+  transform: translateY(-1px);
+}
+
+.project-card h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.25rem;
+  color: var(--text);
+}
+
+.project-card p.summary {
+  margin: 0 0 0.8rem;
+  color: var(--text-dim);
+  font-size: 0.97rem;
+}
+
+.stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.4rem;
+}
+
+.stat {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.stat .stat-value {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* --- Case study pages ---------------------------------------------------- */
+
+.case-header {
+  padding: 2.4rem 0 0.5rem;
+}
+
+.case-header h1 {
+  font-size: 1.85rem;
+  margin: 0 0 0.4rem;
+  letter-spacing: -0.01em;
+}
+
+.case-header p.summary-line {
+  color: var(--text-dim);
+  font-size: 1.05rem;
+  margin: 0 0 1.2rem;
+}
+
+.headline-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+  margin: 1.2rem 0 2rem;
+}
+
+.headline-stat {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+}
+
+.headline-stat .label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  margin-bottom: 0.2rem;
+}
+
+.headline-stat .value {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+section.block {
+  margin: 2.2rem 0;
+}
+
+section.block h2 {
+  font-size: 1.28rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.4rem;
+  margin: 0 0 0.9rem;
+}
+
+section.block h3 {
+  font-size: 1.05rem;
+  margin: 1.3rem 0 0.5rem;
+  color: var(--text);
+}
+
+section.block p { margin: 0.6rem 0; }
+
+section.block ul, section.block ol {
+  padding-left: 1.3rem;
+}
+
+section.block li { margin: 0.35rem 0; }
+
+figure.shot {
+  margin: 1.2rem 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+figure.shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+figure.shot figcaption {
+  padding: 0.7rem 1rem;
+  font-size: 0.87rem;
+  color: var(--text-dim);
+  border-top: 1px solid var(--border);
+}
+
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+  margin: 0.8rem 0;
+}
+
+table.data th, table.data td {
+  text-align: left;
+  padding: 0.45rem 0.7rem;
+  border-bottom: 1px solid var(--border);
+}
+
+table.data th {
+  color: var(--text-dim);
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+table.data td.num, table.data th.num { text-align: right; font-family: monospace; }
+
+.callout {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent-dim);
+  border-radius: 6px;
+  padding: 0.85rem 1.05rem;
+  font-size: 0.93rem;
+  color: var(--text-dim);
+  margin: 1rem 0;
+}
+
+.callout strong { color: var(--text); }
+
+.callout.caveat {
+  border-left-color: var(--warn);
+}
+
+footer.sitefoot {
+  border-top: 1px solid var(--border);
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+@media (min-width: 640px) {
+  .project-grid { grid-template-columns: 1fr; }
+}

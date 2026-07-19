@@ -1,0 +1,148 @@
+<title>Subaru Outback Aero — CFD Case Study</title>
+<meta name="description" content="Automotive external aerodynamics CFD of a custom-built 2022 Subaru Outback model, iterated across two geometry revisions.">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="assets/css/style.css">
+
+<nav class="topnav">
+  <div class="topnav-inner">
+    <span class="topnav-brand">CFD Case Studies</span>
+    <div class="topnav-links">
+      <a href="index.html">Home</a>
+      <a href="racecarAero.html">Race Car Aero</a>
+      <a href="superSonic.html">Supersonic Missile</a>
+      <a href="subaruOutback.html" class="current">Subaru Outback</a>
+    </div>
+  </div>
+</nav>
+
+<div class="page">
+
+  <div class="case-header">
+    <h1>Subaru Outback (2022) — Automotive External Aero</h1>
+    <p class="summary-line">
+      A custom-built vehicle model, taken through two design/geometry
+      iterations with measured drag improvement between them.
+    </p>
+  </div>
+
+  <div class="callout caveat">
+    <strong>A note on this write-up:</strong> this was an earlier project, and
+    its live OpenFOAM case directory no longer exists (cleaned up before
+    later projects began). Everything below about flow conditions, mesh, and
+    solver choice is reconstructed from surviving Windows-side screenshots and
+    files rather than confirmed against live dictionaries &mdash; it's
+    presented as informed reconstruction, not verified fact, and marked
+    accordingly. The force coefficient results themselves come directly from
+    terminal output captured in those screenshots, so those numbers are
+    solid.
+  </div>
+
+  <div class="headline-stats">
+    <div class="headline-stat"><div class="label">Cd (rev 1)</div><div class="value">0.417</div></div>
+    <div class="headline-stat"><div class="label">Cd (rev 2)</div><div class="value">0.352</div></div>
+    <div class="headline-stat"><div class="label">Cl (rev 2)</div><div class="value">-0.351</div></div>
+    <div class="headline-stat"><div class="label">Geometry</div><div class="value">Custom CAD</div></div>
+  </div>
+
+  <section class="block">
+    <h2>Problem &amp; Goal</h2>
+    <p>
+      External aerodynamic simulation of a 2022 Subaru Outback XT, built as a
+      custom CAD model rather than sourced from an existing mesh library.
+      The model was built in Blender, then dimensionally checked against a
+      real trim-level parts/build-list spreadsheet to keep it faithful to an
+      actual production configuration rather than a generic stand-in shape.
+      Separate wheel, front-vent, and engine-block geometry were modeled,
+      suggesting an attempt at at least partial underhood cooling-flow
+      detail, not just an external shell.
+    </p>
+  </section>
+
+  <section class="block">
+    <h2>Methodology <span style="font-weight:400;color:var(--text-dim);font-size:0.75em;">(reconstructed &mdash; see caveat above)</span></h2>
+    <ul>
+      <li>
+        Geometry: Blender-modeled base (<code>Subaru Outback 2022.blend</code>),
+        exported to STL/OBJ, with separate front/rear wheel, front-vent, and
+        engine-block surfaces. A second geometry revision was produced in
+        Fusion 360 (naming convention: "obxt" = Outback XT, "Rev1" for the
+        revised pass).
+      </li>
+      <li>
+        Flow regime: low-speed/near-incompressible, consistent with a
+        highway-speed automotive case (velocity contours in the ~40&ndash;44&nbsp;m/s
+        range) &mdash; nothing resembling the missile project's compressible
+        regime.
+      </li>
+      <li>
+        Turbulence/solver: no surviving dictionary confirms the exact model,
+        but a RANS eddy-viscosity turbulence model and a steady-state solver
+        (most likely <code>simpleFoam</code>) is the standard, near-universal
+        choice for this class of problem and the best-supported inference
+        from the visualized fields (steady-looking contours, no
+        timestep-dependent transient artifacts).
+      </li>
+      <li>
+        Mesh: not recoverable in detail. Visible stair-stepped contour
+        boundaries in the wake region of the surviving renders are consistent
+        with a snappyHexMesh-style background+refinement mesh, coarser than
+        the level of detail used in the later race-car project.
+      </li>
+    </ul>
+  </section>
+
+  <section class="block">
+    <h2>Results — Two Design Iterations</h2>
+    <p>
+      Two distinct sets of force coefficients survive, corresponding to the
+      Blender-based initial geometry and the Fusion-360-refined revision:
+    </p>
+    <table class="data">
+      <tr><th></th><th class="num">Rev 1 (Blender)</th><th class="num">Rev 2 (Fusion 360 refined)</th></tr>
+      <tr><td>Cd</td><td class="num">0.417</td><td class="num">0.352</td></tr>
+      <tr><td>Cl</td><td class="num">-0.651</td><td class="num">-0.351</td></tr>
+      <tr><td>Cl, front axle</td><td class="num">-0.425</td><td class="num">-0.344</td></tr>
+      <tr><td>Cl, rear axle</td><td class="num">-0.226</td><td class="num">-0.007</td></tr>
+      <tr><td>Cm</td><td class="num">-0.099</td><td class="num">-0.169</td></tr>
+    </table>
+    <p>
+      Drag dropped substantially (0.417&nbsp;&rarr;&nbsp;0.352) and total lift
+      magnitude roughly halved between the two geometry passes, with nearly
+      all of the remaining lift concentrated at the front axle in the revised
+      geometry (rear-axle contribution dropped to essentially zero). For
+      context, production Outback-class wagons typically report factory Cd
+      figures in the 0.32&ndash;0.34 range, so 0.352 reads as a plausible,
+      credible converged estimate, while 0.417 looks like an early/rough-geometry
+      overestimate that the geometry revision corrected.
+    </p>
+    <div class="callout caveat">
+      It isn't confirmed whether both runs used identical reference values
+      (freestream velocity, reference area, reference length) &mdash; since no
+      <code>forceCoeffsDict</code> survives from either run, some of the
+      difference could in principle reflect changed reference parameters
+      rather than purely the geometry revision. Presented here as the most
+      likely explanation, not a certainty.
+    </div>
+
+    <figure class="shot">
+      <img src="assets/img/subaru-velocity-contour.jpg" alt="Turbulent viscosity and pressure contour on the car's symmetry plane, showing a low-pressure wake region behind the hatch.">
+      <figcaption>
+        Turbulent viscosity (nut) and pressure contour on the symmetry plane,
+        showing flow separation and a low-pressure wake behind the hatch.
+      </figcaption>
+    </figure>
+
+    <figure class="shot">
+      <img src="assets/img/subaru-pressure-contour.jpg" alt="Velocity magnitude and pressure contour along the car's profile, showing stagnation at the front fascia and an accelerated flow region over the roof.">
+      <figcaption>
+        Velocity magnitude and pressure contour along the vehicle profile,
+        showing stagnation pressure at the front fascia and accelerated flow
+        over the roofline.
+      </figcaption>
+    </figure>
+  </section>
+
+  <footer class="sitefoot">
+    <a href="index.html">&larr; Back to all projects</a>
+  </footer>
+</div>

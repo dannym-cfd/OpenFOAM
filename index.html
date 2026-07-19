@@ -1,0 +1,86 @@
+<title>CFD Portfolio</title>
+<meta name="description" content="Applied CFD case studies — GPU-accelerated external aerodynamics, supersonic missile aero, and automotive aero, all built with OpenFOAM.">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="assets/css/style.css">
+
+<nav class="topnav">
+  <div class="topnav-inner">
+    <span class="topnav-brand">CFD Case Studies</span>
+    <div class="topnav-links">
+      <a href="index.html" class="current">Home</a>
+      <a href="racecarAero.html">Race Car Aero</a>
+      <a href="superSonic.html">Supersonic Missile</a>
+      <a href="subaruOutback.html">Subaru Outback</a>
+    </div>
+  </div>
+</nav>
+
+<div class="page">
+  <section class="hero">
+    <h1>Applied CFD, end to end</h1>
+    <p class="lede">
+      Three independent OpenFOAM projects — a GPU-accelerated race car external
+      aero case, a supersonic missile aerodynamics case, and an automotive
+      external aero case — each run from CAD geometry through meshing,
+      solving, and force/moment extraction. These are working engineering
+      case studies, not tutorials: real mesh-crash debugging, real solver
+      pivots, and real numbers.
+    </p>
+  </section>
+
+  <div class="project-grid">
+
+    <a class="project-card" href="racecarAero.html">
+      <h2>Race Car External Aero — GPU-Accelerated RANS/PIMPLE</h2>
+      <p class="summary">
+        Half-car symmetry-plane simulation at 50&nbsp;m/s with vortex generators,
+        underbody diffuser, engine intake flow, and a custom AmgX GPU pressure
+        solve. Steady RANS baseline with a transient PIMPLE follow-up once the
+        wake proved genuinely unsteady.
+      </p>
+      <div class="stat-row">
+        <span class="stat">Cd <span class="stat-value">0.278</span></span>
+        <span class="stat">Cl <span class="stat-value">-0.180</span></span>
+        <span class="stat">Solver <span class="stat-value">simpleFoam / pimpleFoam + AmgX</span></span>
+      </div>
+    </a>
+
+    <a class="project-card" href="superSonic.html">
+      <h2>Supersonic Missile Aerodynamics — Mach 3.8</h2>
+      <p class="summary">
+        A two-stage boosted missile at Mach 3.8115, 15.77&nbsp;km altitude, sized
+        from a custom flight-mechanics ascent trajectory. Two-mesh
+        coarse-to-fine field-mapping workflow, 1.23M-cell final mesh, and an
+        honest account of a GPU linear-solver stack that was built but not
+        shipped.
+      </p>
+      <div class="stat-row">
+        <span class="stat">Mach <span class="stat-value">3.81</span></span>
+        <span class="stat">Cd <span class="stat-value">0.031</span></span>
+        <span class="stat">Solver <span class="stat-value">sonicFoam</span></span>
+      </div>
+    </a>
+
+    <a class="project-card" href="subaruOutback.html">
+      <h2>Subaru Outback — Automotive External Aero</h2>
+      <p class="summary">
+        Custom-built vehicle geometry (Blender, then refined in Fusion 360)
+        checked against a real trim-level build list, run through two design
+        iterations. Drag coefficient improved substantially between geometry
+        revisions.
+      </p>
+      <div class="stat-row">
+        <span class="stat">Cd (rev1) <span class="stat-value">0.417</span></span>
+        <span class="stat">Cd (rev2) <span class="stat-value">0.352</span></span>
+        <span class="stat">Solver <span class="stat-value">simpleFoam (inferred)</span></span>
+      </div>
+    </a>
+
+  </div>
+
+  <footer class="sitefoot">
+    All three cases were built, meshed, and solved independently using
+    OpenFOAM. Full technical detail — flow conditions, mesh strategy,
+    debugging history, and results — is on each project's page.
+  </footer>
+</div>
