@@ -210,35 +210,87 @@ kept mean Courant ≈0.00028 (max 0.364).
 
 ### Convergence monitoring
 
-![Coarse mesh residual history, zoomed to the final portion of the solve (0.023-0.03s simulated time)](../assets/img/missile-coarse-residuals.png)
+#### Cells per refinement level
 
-*Coarse mesh: initial residuals for Ux, Uy, Uz, e, p, epsilon, k over the
-final portion of the solve.*
-
-![Coarse mesh Courant number history, zoomed to the final portion of the solve](../assets/img/missile-coarse-courant.png)
-
-*Coarse mesh: mean/max Courant number over the same window.*
-
-![Coarse mesh initial residuals, comparing run1 (solid) vs run2 (dashed) across two solve sessions](../assets/img/missile-coarse-residuals-compare-initial.png)
-
-*Coarse mesh: initial residuals per field, run1 (solid) vs. run2 (dashed) —
-two separate solve sessions on the same case.*
-
-![Coarse mesh final residuals, comparing run1 (solid) vs run2 (dashed) across two solve sessions](../assets/img/missile-coarse-residuals-compare-final.png)
-
-*Coarse mesh: final (post-inner-iteration) residuals per field, same run1
-vs. run2 comparison.*
-
-![Cells per refinement level on the fine mesh, showing level 8 as the dominant refinement level](../assets/img/missile-fine-cells-per-level.png)
+<p>
+  <img src="../assets/img/missile-fine-cells-per-level.png" width="100%">
+</p>
 
 *Fine mesh: cells per refinement level — level 8 dominates, consistent with
-611,508 of 1,232,688 total cells sitting at the finest level.*
+611,508 of 1,232,688 total cells sitting at the finest level. (Coarse-mesh
+per-level breakdown not yet captured.)*
 
-![Target vs achieved boundary layers per patch on the fine mesh, and overall layer thickness coverage percentage per patch](../assets/img/missile-fine-layers-per-patch.png)
+| Metric | Coarse mesh | Fine mesh |
+|---|---|---|
+| Total cells | 175,166 | 1,232,688 |
+| Max refinement level | 6 | 8 |
+| Cells at max level | not captured | 611,508 (~50%) |
+
+#### Layers per patch
+
+<p>
+  <img src="../assets/img/missile-fine-layers-per-patch.png" width="100%">
+</p>
 
 *Fine mesh: target vs. achieved layer count and overall thickness coverage
-per patch — fuselage 54%, bodyFins 85%, boosterFins 73%, matching the
-55–86% range noted above.*
+per patch. (Coarse-mesh equivalent not yet captured.)*
+
+| Patch | Coarse target layers | Fine target layers | Fine achieved coverage |
+|---|---|---|---|
+| fuselage | 5 | 20 | 54% |
+| bodyFins | 3 | 12 | 85% |
+| boosterFins | 3 | 12 | 73% |
+
+#### Solver results
+
+Full-range solve logs, coarse mesh (left) vs. fine mesh (right):
+
+<p>
+  <img src="../assets/img/missile-coarse-solver-timepacing.png" width="49%">
+  <img src="../assets/img/missile-fine-solver-timepacing.png" width="49%">
+</p>
+
+*Time pacing: simulated time vs. wall-clock time, and cumulative average
+solve rate.*
+
+<p>
+  <img src="../assets/img/missile-coarse-residuals.png" width="49%">
+  <img src="../assets/img/missile-fine-solver-initial.png" width="49%">
+</p>
+
+*Initial residuals per field.*
+
+<p>
+  <img src="../assets/img/missile-coarse-solver-final.png" width="49%">
+  <img src="../assets/img/missile-fine-solver-final.png" width="49%">
+</p>
+
+*Final (post-inner-iteration) residuals per field.*
+
+<p>
+  <img src="../assets/img/missile-coarse-courant.png" width="49%">
+  <img src="../assets/img/missile-fine-solver-courant.png" width="49%">
+</p>
+
+*Mean/max Courant number.*
+
+| Metric | Coarse mesh | Fine mesh |
+|---|---|---|
+| Simulated time reached | ~0.024 s (of 0.03 s target) | ~0.0041 s (of 0.005 s target) |
+| Wall-clock time | ~7,400 s (~2 h) | ~58,000 s (~16 h) |
+| Mean Courant | ~1×10⁻³ | ≈0.00028 |
+| Max Courant | ~0.35 | ≈0.364 |
+
+Coarse mesh was also solved across two separate sessions on the same case
+(run1/run2), compared directly:
+
+<p>
+  <img src="../assets/img/missile-coarse-residuals-compare-initial.png" width="49%">
+  <img src="../assets/img/missile-coarse-residuals-compare-final.png" width="49%">
+</p>
+
+*Coarse mesh, run1 (solid) vs. run2 (dashed): initial residuals (left),
+final residuals (right).*
 
 ## Engineering Challenges
 
