@@ -8,20 +8,44 @@ two-mesh coarse-to-fine workflow for a 1.2M-cell compressible solve.
 |---|---|---|---|---|
 | 3.8115 | 15.77 km | 0.0310 | 1.23M cells | sonicFoam |
 
-## Problem & Goal
+## Goal
 
-Compressible aero of a two-stage missile at a supersonic condition:
-converged drag coefficient, and confirmation that shock structure and
-near-zero lift/side-force/moments (axisymmetric body, zero AoA) are
-physical. Stage 1: solid rocket motor sustainer (powered boost). Stage 2:
-unpropelled glide stage with variable-sweep wings, sweep angle set by
-flight state. Flight condition taken from a point-mass ascent trajectory
-model (velocity, Mach, altitude, thrust, drag, stage, propellant mass,
-stability margin) at ~19 s into flight, mid first-stage burn.
+The purpose of this case is to get a trustworthy drag coefficient for a
+real, physically-grounded flight condition, and confirm the flow physics
+around the vehicle behave the way they should for a supersonic, axisymmetric
+body — not just to run a CFD solve and report whatever number comes out.
+Concretely, that means two things: a converged Cd at a specific point in the
+missile's flight, and a sanity check that the shock structure looks physical
+and that lift/side-force/moments all come out near-zero, which is exactly
+what should happen for an axisymmetric body at zero angle of attack. If
+those secondary checks came out wrong, the Cd number wouldn't be trustworthy
+regardless of how "converged" it looked.
 
-## Airframe & Avionics
+The vehicle itself is a two-stage design: **Stage 1** is a solid rocket
+motor sustainer providing powered boost; **Stage 2** is an unpropelled glide
+stage with variable-sweep wings that deploy once the booster separates, with
+sweep angle set by the current flight state rather than fixed. The specific
+flight condition simulated — Mach 3.8115 at 15.77 km altitude — isn't a
+round test number. It's a single point pulled from a custom flight-mechanics
+model (below), sampled at ~19 s into flight, mid-way through first-stage
+burn.
 
-### Geometry details
+## Process
+
+Getting from "we want a Cd at this flight condition" to an actual converged
+CFD result took four stages: defining the physical vehicle (airframe/CAD),
+figuring out what flight condition was actually worth simulating (the MATLAB
+flight-mechanics tool), setting up and solving the CFD case itself, and then
+verifying that solve actually converged before trusting the result. Each is
+covered below, along with the real engineering dead ends hit along the way.
+
+### Airframe & Avionics
+
+Before any CFD or trajectory math happens, the vehicle needs to actually
+exist as a defined, dimensioned object — otherwise "Mach 3.8115" is just a
+number with nothing physical behind it. This section covers the CAD
+assembly, the exact geometry (airfoils, pivot locations, nose profile), and
+the avionics that would fly on a real build.
 
 Body diameter 98 mm, total (glider-stage) mass 9180.43 g. Wing pivot at
 -494.5 mm from nose tip, control fins centered at -930.5 mm from nose tip.
@@ -63,12 +87,16 @@ NEO-M9N-00B GNSS module (SMT).*
 *Wing-sweep actuator mechanism at the wing root — two linear actuators per
 side driving the sweep motion `missileFlightApp` models as `sweep_deg`.*
 
-## missileFlightApp (MATLAB)
+### Flight Profile — missileFlightApp
 
-Custom MATLAB app used to size the flight condition simulated in this case.
-Point-mass trajectory model covering the full flight profile: loft
-trajectory, engine/sustainer burn, staging, and the unpropelled glide phase.
-Computes:
+With the vehicle defined, the next question is: at what point in an actual
+flight is it worth spending CFD compute? A missile's Mach number and
+altitude change continuously through boost and glide, so picking a
+condition to simulate needs an actual flight-mechanics model behind it —
+otherwise "Mach 3.8" is arbitrary. `missileFlightApp` is a custom MATLAB
+tool built to answer exactly that: a point-mass trajectory model covering
+the full flight profile (loft trajectory, engine/sustainer burn, staging,
+and the unpropelled glide phase), computing:
 
 - Maximum range for a given impact speed
 - Loft trajectory (altitude/velocity/Mach vs. time)
@@ -76,10 +104,10 @@ Computes:
 - Variable-sweep wing angle vs. flight state on the glide stage
 - Fin deflection angle
 
-The Mach 3.8115 / 15.77 km CFD condition above is a single point pulled from
-this model's output, not an arbitrary test case.
+The Mach 3.8115 / 15.77 km CFD condition used throughout this case is a
+single point pulled directly from this model's output.
 
-### App layout
+#### App layout
 
 Five tabs: Flight Path (trajectory, velocity/ground track, forces &
 atmospheric density), Aircraft Characteristics (CG migration, wing sweep,
@@ -97,9 +125,12 @@ history for the default launch parameters.*
 *Aircraft Characteristics tab: CG migration, wing sweep angle vs. flight
 path angle, and fin trim deflection over the same flight.*
 
-### Integration and CFD feedback loop
+#### Integration and CFD feedback loop
 
-Trajectory integration is RK4, replacing an earlier explicit-Euler scheme —
+A flight-mechanics model is only as good as the aerodynamic assumptions
+feeding it, so this isn't a one-way pipeline — CFD results feed back into
+the trajectory model to correct its analytical drag estimate. Trajectory
+integration itself is RK4, replacing an earlier explicit-Euler scheme —
 Euler's numerical damping was under-predicting peak Mach (3.81 vs. RK4's
 4.3) and range during the high-thrust boost phase. `readLatestForceCoeffs.m`
 scans the OpenFOAM case's `postProcessing/forceCoeffs/` for the most
@@ -112,15 +143,18 @@ validated against it. Cl/CmPitch calibration is also read from CFD but
 skipped when the analytical baseline is ~0 (AoA=0 on a symmetric body),
 since the ratio is undefined there.
 
-### Motor model
+#### Motor model
 
-Solid rocket motor sized from a fixed CAD envelope (88mm OD × 1m length):
-wall thickness and material (Aluminum/Steel/Titanium/CarbonFiber/Fiberglass)
-set casing mass and remaining bore volume; propellant mass falls out of
-that bore volume × propellant density. Propellant type (APCP, double-base,
-black powder, HTPB/AP/Al) and nozzle expansion ratio drive an effective Isp
-via a nozzle-efficiency curve. This is a parametric approximation, not a
-real internal-ballistics model — no grain burn-area geometry, no
+The boost-phase trajectory (and therefore the flight condition itself)
+depends on how the solid rocket motor is sized, so the motor needed its own
+parametric model rather than a fixed assumed thrust curve. Solid rocket
+motor sized from a fixed CAD envelope (88mm OD × 1m length): wall thickness
+and material (Aluminum/Steel/Titanium/CarbonFiber/Fiberglass) set casing
+mass and remaining bore volume; propellant mass falls out of that bore
+volume × propellant density. Propellant type (APCP, double-base, black
+powder, HTPB/AP/Al) and nozzle expansion ratio drive an effective Isp via a
+nozzle-efficiency curve. This is a parametric approximation, not a real
+internal-ballistics model — no grain burn-area geometry, no
 chamber-pressure/burn-rate coupling.
 
 ![Engine tab showing Motor Design panel (APCP propellant, aluminum wall, 20:1 nozzle expansion ratio, 3mm wall thickness, 8000N boost thrust) and Engine Thrust / Propellant Burn plots over the 20s burn](../assets/img/missileFlightApp-engine.png)
@@ -130,15 +164,18 @@ chamber-pressure/burn-rate coupling.
 configuration), thrust profile (8000N boost dropping to a lower sustain
 level) and propellant mass depletion over the 20.5s burn on the right.*
 
-### Geometry rendering and debugging
+#### Geometry rendering and debugging
 
-Nose, fuselage, and booster fins render from real STL outlines (sliced at
-the Y=0 plane, top-view, so a laterally-swept wing is actually visible
-rather than edge-on). The wing itself is a synthetic constant-chord
-rectangle driven by the same sweep formulas as the aero model — real-STL
-wing rotation was tried and reverted after it produced degenerate,
-flying-off shapes at large sweep angles, traced to rotating about a pivot
-that didn't match the STL's actual coordinate frame.
+The app's 2D geometry view exists to visually sanity-check that the
+trajectory model's staging, wing sweep, and CG behavior are actually doing
+what the underlying physics says they're doing — and building it surfaced
+some real bugs along the way. Nose, fuselage, and booster fins render from
+real STL outlines (sliced at the Y=0 plane, top-view, so a laterally-swept
+wing is actually visible rather than edge-on). The wing itself is a
+synthetic constant-chord rectangle driven by the same sweep formulas as the
+aero model — real-STL wing rotation was tried and reverted after it
+produced degenerate, flying-off shapes at large sweep angles, traced to
+rotating about a pivot that didn't match the STL's actual coordinate frame.
 
 Two behaviors that looked like bugs but weren't: the top-stage CG appeared
 to toggle between two fixed points instead of moving continuously with wing
@@ -160,9 +197,15 @@ instantaneous thrust.*
 *Geometry tab, stage 2: booster (with its fins) jettisoned, wing swept out
 to 22.8°, tail fin trimmed to -3.9° at Mach 0.98.*
 
-## Methodology
+### CFD Setup
 
-### Flow conditions
+With a specific flight condition chosen, the CFD case needs flow physics and
+a mesh that can actually resolve a Mach 3.8 shock structure without either
+being wrong (too coarse) or impossibly expensive (too fine everywhere at
+once) — which is why this uses a two-mesh strategy rather than a single
+mesh.
+
+**Flow conditions:**
 
 - Mach 3.8115, 1124.9 m/s, 15.77 km altitude (ISA stratosphere).
 - p∞ = 10,663 Pa, T∞ = 216.65 K, ρ∞ = 0.1714 kg/m³ (ideal gas law, within
@@ -173,10 +216,9 @@ to 22.8°, tail fin trimmed to -3.9° at Mach 0.98.*
   Pr 0.7).
 - Turbulence: RAS Launder-Sharma k-ε (low-Re, wall-resolved).
 
-### Two-mesh strategy
-
-Coarse mesh run first, mapped onto the fine mesh, avoiding a cold-start
-shock-formation transient on the expensive mesh:
+**Two-mesh strategy:** rather than starting the expensive fine mesh from a
+cold, uniform freestream and burning compute on the initial shock-formation
+transient, a coarse mesh is run first and mapped onto the fine mesh:
 
 | | Coarse mesh | Fine mesh |
 |---|---|---|
@@ -201,14 +243,22 @@ result, both meshes clean (all checks 0, "Finished meshing without any errors"):
 | Snapping iterations | 41 | 41 |
 | Layer addition iterations | 27 | 11 |
 
-### Solver strategy
+### Solver Strategy
 
-`sonicFoam`, Euler time stepping, bounded/TVD schemes for shocks/expansion
-fans. Decomposition: `scotch` (minimizes inter-processor boundaries on
-complex geometry), 12 cores, single workstation. Fixed 9×10⁻⁸ s timestep
-kept mean Courant ≈0.00028 (max 0.364).
+Meshing alone doesn't guarantee a usable solve — the solver, scheme choice,
+and decomposition all had to be matched to a genuinely supersonic, shock-
+containing flow rather than a generic RANS setup. `sonicFoam`, Euler time
+stepping, bounded/TVD schemes for shocks/expansion fans. Decomposition:
+`scotch` (minimizes inter-processor boundaries on complex geometry), 12
+cores, single workstation. Fixed 9×10⁻⁸ s timestep kept mean Courant
+≈0.00028 (max 0.364).
 
-### Convergence monitoring
+### Convergence Verification
+
+A converged-looking Cd number is only trustworthy if the mesh that produced
+it actually resolved the geometry properly and the solve itself settled
+rather than just stopped. This section is the evidence for both, covering
+coarse vs. fine mesh side by side.
 
 #### Cells per refinement level
 
@@ -315,7 +365,11 @@ Coarse mesh was also solved across two separate sessions on the same case
 *Coarse mesh, run1 (solid) vs. run2 (dashed): initial residuals (left),
 final residuals (right).*
 
-## Engineering Challenges
+### Engineering Challenges
+
+Not every part of the process worked on the first attempt — these are the
+real dead ends and pivots encountered getting to the setup above, kept
+because they're as informative as the final configuration itself.
 
 - **A GPU linear-solver stack was built, then not shipped.** Built from
   source: CUDA-aware OpenMPI, PETSc (standard + CUDA-MPI), `petsc4Foam`,
@@ -333,6 +387,10 @@ final residuals (right).*
   illegal faces at identifiable cell IDs; final pass: 0 illegal faces.
 
 ## Results
+
+The number this whole process was built to produce, and the physical
+sanity checks that make it trustworthy rather than just a converged-looking
+value.
 
 At t = 0.00492102 s, ρ∞ = 0.1714, l_ref = 1.974 m, A_ref = 0.0791 m²
 (body diameter ≈ 0.317 m):
