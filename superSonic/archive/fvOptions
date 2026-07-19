@@ -1,0 +1,34 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      fvOptions;
+}
+
+limitk
+{
+    type            scalarFixedValueConstraint;
+    active          yes;
+
+    selectionMode   all;
+
+    fieldValues
+    {
+        k       0.5;   
+    }
+}
+
+limitOmega
+{
+    type            scalarFixedValueConstraint;
+    active          yes;
+
+    selectionMode   all;
+
+    fieldValues
+    {
+        omega   1000;  
+    }
+}

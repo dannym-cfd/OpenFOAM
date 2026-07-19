@@ -1,0 +1,132 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2512                                  |
+|   \\  /    A nd           |                                                 |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volVectorField;
+    object      U;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// Freestream speed: 50 m/s (~180 km/h). Change here AND in
+// system/controlDict (magUInf) AND the wheel omega values below
+// (omega = U / wheelRadius, wheelRadius = 0.2889 m) if you change it.
+
+dimensions      [0 1 -1 0 0 0 0];
+
+internalField   uniform (0 50 0);
+
+boundaryField
+{
+    inlet
+    {
+        type            fixedValue;
+        value           uniform (0 50 0);
+    }
+
+    outlet
+    {
+        type            inletOutlet;
+        inletValue      uniform (0 0 0);
+        value           uniform (0 50 0);
+    }
+
+    ground
+    {
+        // Moving ground, matching the freestream (car-stationary wind-tunnel frame)
+        type            movingWallVelocity;
+        value           uniform (0 50 0);
+    }
+
+    top
+    {
+        type            slip;
+    }
+
+    farField
+    {
+        type            slip;
+    }
+
+    symmetry
+    {
+        type            symmetryPlane;
+    }
+
+    "body_.*"
+    {
+        type            noSlip;
+    }
+
+    mirror
+    {
+        type            noSlip;
+    }
+
+    "frontVent.*"
+    {
+        type            noSlip;
+    }
+
+    "sideSkirt.*"
+    {
+        type            noSlip;
+    }
+
+    "vg.*"
+    {
+        type            noSlip;
+    }
+
+    "diffuserFin.*"
+    {
+        type            noSlip;
+    }
+
+    rearSpoiler
+    {
+        type            noSlip;
+    }
+
+    "engSim.*"
+    {
+        // Engine intake extraction: standard OpenFOAM BC for a fixed
+        // mass/volumetric flow sink (purpose-built for exactly this - an
+        // engine airbox/intake consuming a known flow, matches published
+        // race-car airbox CFD practice). Distributes velocity across the
+        // patch's actual face areas to hit the exact total flow rate,
+        // rather than assuming a single uniform velocity like the earlier
+        // surfaceNormalFixedValue attempt did.
+        // Generic TT V6 assumptions: 3.0L, 7500 RPM redline, 1.2 bar gauge
+        // boost (PR ~2.2 - this duct is upstream of the turbo, ambient
+        // density, so boost multiplies the ambient air demand), 95% VE.
+        // Q = displacement * (RPM/60)/2 * VE * PR = 0.003*125*0.95*2.2
+        //   = 0.392 m^3/s
+        type            flowRateOutletVelocity;
+        volumetricFlowRate 0.392;
+        value           uniform (0 0 0);
+    }
+
+    "frontWheel_.*"
+    {
+        type            rotatingWallVelocity;
+        origin          (0.755 0.5 -0.085075);
+        axis            (1 0 0);
+        omega           173.07;
+    }
+
+    "backWheel_.*"
+    {
+        type            rotatingWallVelocity;
+        origin          (0.755 3.4 -0.085075);
+        axis            (1 0 0);
+        omega           173.07;
+    }
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

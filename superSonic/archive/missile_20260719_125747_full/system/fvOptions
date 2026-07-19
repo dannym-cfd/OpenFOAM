@@ -1,0 +1,46 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2512                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      fvOptions;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// Limits for Mach 3.8115 / 15.77 km ISA
+//   T_inf = 216.65 K,  T_stag = 846 K,  U_inf = 1124.9 m/s
+//   rho_inf = 0.1714 kg/m^3,  mu = 1.8e-5 Pa.s
+
+limitU
+{
+    type            limitVelocity;
+    active          yes;
+    selectionMode   all;
+    max             2000;       // m/s — headroom above U_inf, catches runaway expansion
+}
+
+limitT
+{
+    type            limitTemperature;
+    active          yes;
+    selectionMode   all;
+    min             50;         // K — below T_inf, catches expansion fan overshoots
+    max             1500;       // K — well above T_stag (846 K), catches shock overshoots
+}
+
+limitNut
+{
+    type            limitTurbulenceViscosity;
+    active          yes;
+    selectionMode   all;
+    max             1.0;        // m^2/s — ~10x physical BL peak, catches blow-up
+}
+
+// ************************************************************************* //

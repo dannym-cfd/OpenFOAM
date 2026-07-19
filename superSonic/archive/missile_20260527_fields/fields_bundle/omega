@@ -1,0 +1,40 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    object      omega;
+}
+
+dimensions      [0 0 -1 0 0 0 0];
+
+internalField   uniform 65.1;
+
+boundaryField
+{
+    "missile_zone.*"
+    {
+        type            omegaWallFunction;
+        value           uniform 65.1;
+    }
+
+    farfield_inflow
+    {
+        type            fixedValue;
+        value           uniform 65.1;
+    }
+
+    farfield_outflow
+    {
+        type            inletOutlet;
+        inletValue      uniform 65.1;
+        value           uniform 65.1;
+    }
+
+    sides
+    {
+        type            inletOutlet;
+        inletValue      uniform 65.1;
+        value           uniform 65.1;
+    }
+}

@@ -1,0 +1,102 @@
+#!/bin/bash
+cd "${0%/*}" || exit 1
+
+. /usr/lib/openfoam/openfoam2512/etc/bashrc 2>/dev/null
+
+# --------------------------------------------------------------------------- #
+mkdir -p log
+
+TS=$(date '+%Y%m%d_%H%M%S')
+
+log() { echo "[$(date '+%H:%M:%S')] $*"; }
+
+run()
+{
+    local app=$1; shift
+    log "Running $app $*"
+    $app "$@" 2>&1 | tee "log/${app}_${TS}.log"
+    local rc=${PIPESTATUS[0]}
+    [ $rc -ne 0 ] && { log "ERROR: $app failed (exit $rc)"; exit $rc; }
+}
+
+clean_identifiers()
+{
+    log "Removing Zone.Identifier files..."
+    find . -name '*:Zone.Identifier' -delete
+}
+
+run_solver()
+{
+    log "Running sonicFoam on 12 procs..."
+    mpirun -np 12 sonicFoam -parallel 2>&1 | tee "log/sonicFoam_${TS}.log"
+    local rc=${PIPESTATUS[0]}
+    [ $rc -ne 0 ] && { log "ERROR: sonicFoam failed (exit $rc)"; exit $rc; }
+    touch data.foam
+    log "Done"
+}
+
+# --------------------------------------------------------------------------- #
+# Parse flags
+# --------------------------------------------------------------------------- #
+solver_only=false
+latest_time=false
+force_coeffs=false
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        -solver)      solver_only=true ;;
+        -latestTime)  latest_time=true ;;
+        -forceCoeffs) force_coeffs=true ;;
+        *) echo "Unknown flag: $1"; exit 1 ;;
+    esac
+    shift
+done
+
+# --------------------------------------------------------------------------- #
+# -solver: just run sonicFoam, nothing else
+# --------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
+# -forceCoeffs: reconstruct latestTime then run postProcess
+# --------------------------------------------------------------------------- #
+if [ "$force_coeffs" = true ]; then
+    clean_identifiers
+    run reconstructPar -latestTime
+    log "Running forceCoeffs postProcess..."
+    mpirun -np 12 postProcess -parallel -latestTime -dict system/forceCoeffsDict 2>&1 | tee "log/forceCoeffs_${TS}.log"
+    local rc=${PIPESTATUS[0]}
+    [ $rc -ne 0 ] && { log "ERROR: postProcess failed (exit $rc)"; exit $rc; }
+    log "Results in postProcessing/forceCoeffs/"
+    exit 0
+fi
+
+if [ "$solver_only" = true ]; then
+    clean_identifiers
+    run_solver
+    exit 0
+fi
+
+# --------------------------------------------------------------------------- #
+# -latestTime: restart from latest time in existing processor dirs
+# --------------------------------------------------------------------------- #
+if [ "$latest_time" = true ]; then
+    clean_identifiers
+    sed -i 's/^startFrom.*/startFrom       latestTime;/' system/controlDict
+    log "startFrom set to latestTime"
+    run_solver
+    exit 0
+fi
+
+# --------------------------------------------------------------------------- #
+# Full workflow
+# --------------------------------------------------------------------------- #
+clean_identifiers
+
+# Clean old processor dirs and solution time directories
+log "Cleaning old processor and solution time directories..."
+rm -rf processor*/
+find . -maxdepth 1 -regextype posix-extended -regex '\./[0-9]+(\.[0-9]+)?(e[+-]?[0-9]+)?' ! -name '0' -exec rm -rf {} +
+
+# Decompose snapped mesh (constant/polyMesh) + copy 0/ fields to processor dirs
+run decomposePar
+
+run_solver

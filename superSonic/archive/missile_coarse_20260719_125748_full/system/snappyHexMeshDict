@@ -1,0 +1,204 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM
+   \\    /   O peration     | Version:  v2512
+    \\  /    A nd           |
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      snappyHexMeshDict;
+}
+
+castellatedMesh true;
+snap            true;
+addLayers       true;
+
+geometry
+{
+    nose.stl
+    {
+        type triSurfaceMesh;
+        name nose;
+    }
+    fuselage.stl
+    {
+        type triSurfaceMesh;
+        name fuselage;
+    }
+    bodyFins.stl
+    {
+        type triSurfaceMesh;
+        name bodyFins;
+    }
+    boosterFins.stl
+    {
+        type triSurfaceMesh;
+        name boosterFins;
+    }
+
+    vehicleRefineBox
+    {
+        type searchableBox;
+        min (-1.2 -1.2 -2.1);
+        max (1.2  1.2  0.1);
+    }
+};
+
+castellatedMeshControls
+{
+    maxLocalCells      2000000;
+    maxGlobalCells     7000000;
+    minRefinementCells 10;
+    maxLoadUnbalance   0.10;
+    nCellsBetweenLevels 3;
+
+    features
+    (
+        { file "nose.eMesh";        level 5; }
+        { file "fuselage.eMesh";    level 5; }
+        { file "bodyFins.eMesh";    level 6; }
+        { file "boosterFins.eMesh"; level 6; }
+    );
+
+    refinementSurfaces
+    {
+        nose
+        {
+            level (5 6);
+            patchInfo { type wall; }
+        }
+        fuselage
+        {
+            level (4 5);
+            patchInfo { type wall; }
+        }
+        bodyFins
+        {
+            level (6 7);
+            patchInfo { type wall; }
+        }
+        boosterFins
+        {
+            level (6 7);
+            patchInfo { type wall; }
+        }
+    }
+
+    resolveFeatureAngle 20;
+
+    refinementRegions
+    {
+        vehicleRefineBox
+        {
+            mode inside;
+            levels ((1e15 3));
+        }
+    }
+
+    locationInMesh (-4 -4 -4);
+
+    allowFreeStandingZoneFaces true;
+}
+
+snapControls
+{
+    nSmoothPatch    3;
+    tolerance       2.0;
+    nSolveIter      50;
+    nRelaxIter      5;
+
+    nFeatureSnapIter      10;
+    implicitFeatureSnap   false;
+    explicitFeatureSnap   true;
+    multiRegionFeatureSnap false;
+}
+
+addLayersControls
+{
+    relativeSizes false;
+
+    layers
+    {
+        "nose.*"
+        {
+            nSurfaceLayers 0;
+        }
+        "fuselage.*"
+        {
+            nSurfaceLayers 5;
+            featureAngle 50;
+        }
+        "bodyFins.*"
+        {
+            nSurfaceLayers 3;
+        }
+        "boosterFins.*"
+        {
+            nSurfaceLayers 3;
+        }
+    }
+
+    firstLayerThickness 0.00015;
+    expansionRatio      1.1;
+    minThickness        0.000003;
+
+    featureAngle 60;
+    nGrow        0;
+
+    maxFaceThicknessRatio   0.5;
+    maxThicknessToMedialRatio 0.3;
+    minMedialAxisAngle      90;
+
+    nSmoothSurfaceNormals 3;
+    nSmoothNormals        5;
+    nSmoothThickness      10;
+
+    nRelaxIter    5;
+    nLayerIter    75;
+    nRelaxedIter  50;
+
+    nBufferCellsNoExtrude 0;
+}
+
+meshQualityControls
+{
+    maxNonOrtho       65;
+    maxBoundarySkewness 20;
+    maxInternalSkewness 4;
+    maxConcave        80;
+    minVol            1e-13;
+    minTetQuality     1e-9;
+    minArea           -1;
+    minTwist          0.02;
+    minDeterminant    0.001;
+    minFaceWeight     0.02;
+    minVolRatio       0.01;
+    minTriangleTwist  -1;
+
+    nSmoothScale    4;
+    errorReduction  0.75;
+
+    relaxed
+    {
+        maxNonOrtho       75;
+        maxBoundarySkewness 25;
+        maxInternalSkewness 6;
+        maxConcave        80;
+        minVol            1e-15;
+        minTetQuality     -1e30;
+        minArea           -1;
+        minTwist          -1;
+        minDeterminant    -1;
+        minFaceWeight     -1;
+        minVolRatio       -1;
+        minTriangleTwist  -1;
+    }
+}
+
+mergeTolerance 1e-6;
+
+// ************************************************************************* //

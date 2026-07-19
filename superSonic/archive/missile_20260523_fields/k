@@ -1,0 +1,38 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    object      k;
+}
+
+dimensions      [0 2 -2 0 0 0 0];
+
+internalField   uniform 0.1185;
+
+boundaryField
+{
+    "missile_zone.*"
+    {
+        type            kLowReWallFunction;
+        value           uniform 0.1185;
+    }
+
+    farfield_inflow
+    {
+        type            fixedValue;
+        value           uniform 0.1185;
+    }
+
+    farfield_outflow
+    {
+        type            inletOutlet;
+        inletValue      uniform 0.1185;
+        value           uniform 0.1185;
+    }
+
+    sides
+    {
+        type            zeroGradient;
+    }
+}

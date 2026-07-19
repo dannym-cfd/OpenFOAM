@@ -1,0 +1,44 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2512                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      forceCoeffsDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+functions
+{
+    forceCoeffs
+    {
+        type            forceCoeffs;
+        libs            (forces);
+        writeControl    writeTime;
+
+        patches
+        (
+            nose
+            fuselage
+            bodyFins
+            boosterFins
+        );
+
+        rhoInf      0.1714;        // kg/m^3, ISA 15.77 km
+        CofR        (0 0 -0.987);  // midpoint of body length
+        liftDir     (0 1 0);       // +y up
+        dragDir     (0 0 -1);      // opposing +z flight direction
+        pitchAxis   (1 0 0);
+        magUInf     1124.9;        // m/s, Mach 3.8115 at 15.77 km
+        lRef        1.974;         // body length, m
+        Aref        0.0791;        // frontal area pi*(d/2)^2, m^2
+    }
+}
+
+// ************************************************************************* //

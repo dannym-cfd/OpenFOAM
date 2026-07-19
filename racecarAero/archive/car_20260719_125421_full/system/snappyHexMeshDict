@@ -1,0 +1,380 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2512                                  |
+|   \\  /    A nd           |                                                 |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      snappyHexMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+castellatedMesh true;
+snap            true;
+addLayers       true;
+
+geometry
+{
+    body.stl
+    {
+        type triSurfaceMesh;
+        name body;
+    }
+    frontwheel.stl
+    {
+        type triSurfaceMesh;
+        name frontWheel;
+    }
+    backwheel.stl
+    {
+        type triSurfaceMesh;
+        name backWheel;
+    }
+    mirror.stl
+    {
+        type triSurfaceMesh;
+        name mirror;
+    }
+    frontvent.stl
+    {
+        type triSurfaceMesh;
+        name frontVent;
+    }
+    sideskirt.stl
+    {
+        type triSurfaceMesh;
+        name sideSkirt;
+    }
+    vg1.stl { type triSurfaceMesh; name vg1; }
+    vg2.stl { type triSurfaceMesh; name vg2; }
+    vg3.stl { type triSurfaceMesh; name vg3; }
+    vg4.stl { type triSurfaceMesh; name vg4; }
+    vg5.stl { type triSurfaceMesh; name vg5; }
+    vg6.stl { type triSurfaceMesh; name vg6; }
+    engsim.stl
+    {
+        // Solid blocker inside the vent duct (now cut into body.stl) -
+        // stands in for the engine air intake face without modeling actual
+        // mass removal; just a wall the flow builds pressure against.
+        type triSurfaceMesh;
+        name engSim;
+    }
+    diffuserfin.stl
+    {
+        // ~5mm thick underbody strake - same thinness class as the VGs.
+        type triSurfaceMesh;
+        name diffuserFin;
+    }
+    rearspoiler.stl
+    {
+        type triSurfaceMesh;
+        name rearSpoiler;
+    }
+
+    wakeRefinementBox
+    {
+        type searchableBox;
+        min (0 3.4 -0.374);
+        max (5 20 2.5);
+    }
+    nearCarRefinementBox
+    {
+        type searchableBox;
+        min (0 -1 -0.374);
+        max (2.5 5.5 2.2);
+    }
+    // vg6 originally needed a dedicated box just to be castellated properly
+    // (was a duplicate-geometry issue, since fixed) - but it also came out
+    // of addLayers with ~3x better thickness coverage than vg1-5 (~48% vs
+    // 13-19%), which only get surface-curvature refinement. The extra local
+    // cell resolution from the box appears to help addLayers succeed, not
+    // just castellation - adding the same tight boxes to vg1-5 too.
+    // VGs repositioned (re-exported geometry) - box coords updated to match.
+    vg1Box { type searchableBox; min (0.135 2.45817 0.708312); max (0.20 2.60817 0.798312); }
+    vg2Box { type searchableBox; min (0.235 2.43789 0.699394); max (0.30 2.58788 0.789394); }
+    vg3Box { type searchableBox; min (0.335 2.40770 0.689311); max (0.40 2.55770 0.779310); }
+    vg4Box { type searchableBox; min (0.435 2.38938 0.675206); max (0.50 2.54078 0.765092); }
+    vg5Box { type searchableBox; min (0.535 2.35634 0.654124); max (0.60 2.50774 0.744010); }
+    vg6Box { type searchableBox; min (0.035 2.47907 0.716452); max (0.10 2.62907 0.806452); }
+};
+
+castellatedMeshControls
+{
+    maxLocalCells       4000000;
+    maxGlobalCells      40000000;
+    minRefinementCells  10;
+    maxLoadUnbalance    0.10;
+    nCellsBetweenLevels 4;
+
+    features
+    (
+        { file "body.eMesh";       level 5; }
+        { file "frontwheel.eMesh"; level 6; }
+        { file "backwheel.eMesh";  level 6; }
+        { file "mirror.eMesh";     level 6; }
+        { file "frontvent.eMesh";  level 7; }
+        { file "sideskirt.eMesh";  level 7; }
+        { file "vg1.eMesh";        level 7; }
+        { file "vg2.eMesh";        level 7; }
+        { file "vg3.eMesh";        level 7; }
+        { file "vg4.eMesh";        level 7; }
+        { file "vg5.eMesh";        level 7; }
+        { file "vg6.eMesh";        level 7; }
+        { file "engsim.eMesh";     level 7; }
+        { file "diffuserfin.eMesh"; level 7; }
+        { file "rearspoiler.eMesh"; level 7; }
+    );
+
+    refinementSurfaces
+    {
+        body
+        {
+            // (min max): min applies everywhere, snappy refines up to max
+            // wherever surface curvature exceeds resolveFeatureAngle.
+            level (4 5);
+            patchInfo { type wall; }
+        }
+        frontWheel
+        {
+            level (5 6);
+            patchInfo { type wall; }
+        }
+        backWheel
+        {
+            level (5 6);
+            patchInfo { type wall; }
+        }
+        mirror
+        {
+            level (6 6);
+            patchInfo { type wall; }
+        }
+        frontVent
+        {
+            // Needs finer resolution than the rest of the car - thin
+            // sections/sharp trailing edges on the aero package. Level 8
+            // segfaulted snappyHexMesh twice during parallel shell refine
+            // (hexRef8::setRefinement) once cell counts climbed into the
+            // millions with heavy local imbalance - backed off to 7, still
+            // above everything else's max of 6.
+            level (6 7);
+            patchInfo { type wall; }
+        }
+        sideSkirt
+        {
+            level (6 7);
+            patchInfo { type wall; }
+        }
+        vg1 { level (6 7); patchInfo { type wall; } }
+        vg2 { level (6 7); patchInfo { type wall; } }
+        vg3 { level (6 7); patchInfo { type wall; } }
+        vg4 { level (6 7); patchInfo { type wall; } }
+        vg5 { level (6 7); patchInfo { type wall; } }
+        vg6 { level (6 7); patchInfo { type wall; } }
+        engSim
+        {
+            // Flow boundary now (fixed extraction velocity), not a solid
+            // wall - patchInfo type patch, not wall. Wanted to drop this
+            // below the aero-critical parts' level, but it sits spatially
+            // adjacent to/inside sideSkirt's region (level 6-7): (4 5)
+            // crashed addLayers (concave transition cells), (5 6) still
+            // crashed castellation's own face-merge step (non-manifold
+            // topology, "Can not find faces using edge..."). Reverted to
+            // match sideSkirt/frontVent exactly - zero mismatch, known
+            // stable, since this patch can't safely be refined below its
+            // tightly-interleaved neighbor given its position.
+            level (6 7);
+            patchInfo { type patch; }
+        }
+        diffuserFin
+        {
+            // Thin (5mm) but long (~1.9m) underbody strake - unlike the
+            // compact VGs, a full-length volumetric box here would cover a
+            // large volume (~0.047 m^3, more than the original combined VG
+            // box that caused a level-8 cell explosion). Treating it like
+            // frontVent/sideSkirt instead: surface refinement only, no box
+            // - those get 78-85% layer coverage this way despite being
+            // non-trivial thin panels themselves, unlike the small VGs.
+            level (6 7);
+            patchInfo { type wall; }
+        }
+        rearSpoiler
+        {
+            level (6 7);
+            patchInfo { type wall; }
+        }
+    }
+
+    resolveFeatureAngle 25;
+
+    refinementRegions
+    {
+        wakeRefinementBox
+        {
+            mode inside;
+            levels ((1 2));
+        }
+        nearCarRefinementBox
+        {
+            mode inside;
+            levels ((1 4));
+        }
+        vg1Box { mode inside; levels ((1 8)); }
+        vg2Box { mode inside; levels ((1 8)); }
+        vg3Box { mode inside; levels ((1 8)); }
+        vg4Box { mode inside; levels ((1 8)); }
+        vg5Box { mode inside; levels ((1 8)); }
+        vg6Box { mode inside; levels ((1 8)); }
+    }
+
+    // A point clearly in the fluid, well clear of the car and wake boxes.
+    locationInMesh (4 20 3);
+
+    allowFreeStandingZoneFaces true;
+}
+
+snapControls
+{
+    nSmoothPatch    3;
+    tolerance       2.0;
+    nSolveIter      50;
+    nRelaxIter      5;
+
+    nFeatureSnapIter 10;
+    implicitFeatureSnap    false;
+    explicitFeatureSnap    true;
+    multiRegionFeatureSnap false;
+}
+
+addLayersControls
+{
+    relativeSizes true;
+
+    layers
+    {
+        // body/frontWheel/backWheel each get split into "<name>_patch0",
+        // "<name>_patch1", etc. wherever a sharp feature angle is detected -
+        // match with a regex so every split sub-patch gets layers too.
+        "body_.*"
+        {
+            nSurfaceLayers 4;
+        }
+        "frontWheel_.*"
+        {
+            nSurfaceLayers 4;
+        }
+        "backWheel_.*"
+        {
+            nSurfaceLayers 4;
+        }
+        mirror
+        {
+            nSurfaceLayers 3;
+        }
+        "frontVent.*"
+        {
+            // Thin/sharp geometry - global layer params (finalLayerThickness
+            // 0.5, minThickness 0.1) crashed addLayers with heap corruption
+            // (illegal extruded faces on thin sections). Fewer layers to
+            // avoid collapsing cells on narrow features, but minThickness
+            // kept at the same floor as everywhere else - dropping it to
+            // 0.05 let near-degenerate (near-zero-height) layer cells
+            // through instead of getting truncated, which blew up omega's
+            // wall function (omega ~ 1/y, near-zero y -> ~1e5+ omega from
+            // the very first iteration) and crashed simpleFoam.
+            nSurfaceLayers      2;
+            finalLayerThickness 0.3;
+            minThickness        0.1;
+        }
+        "sideSkirt.*"
+        {
+            nSurfaceLayers      2;
+            finalLayerThickness 0.3;
+            minThickness        0.1;
+        }
+        "vg.*"
+        {
+            // ~5mm thick - even thinner than frontVent/sideSkirt. Single
+            // thin layer only; more risks the same collapsed-cell/omega
+            // blowup problem on a feature this small.
+            nSurfaceLayers      1;
+            finalLayerThickness 0.3;
+            minThickness        0.1;
+        }
+        "diffuserFin.*"
+        {
+            // Same thinness class as the VGs (~5mm) - same conservative
+            // thin-layer treatment.
+            nSurfaceLayers      2;
+            finalLayerThickness 0.3;
+            minThickness        0.1;
+        }
+        rearSpoiler
+        {
+            // Not razor-thin - standard treatment matching mirror.
+            nSurfaceLayers 3;
+        }
+        ground
+        {
+            nSurfaceLayers 4;
+        }
+    }
+
+    expansionRatio        1.2;
+    finalLayerThickness   0.5;
+    minThickness          0.1;
+
+    // Smoothing bumped and minMedialAxisAngle lowered to reduce the layer
+    // coverage gaps near sharp concave edges. nGrow tried at 1 but caused
+    // a severe regression - it grows the do-not-extrude zone by a ring of
+    // faces around every problem spot, and on a mesh with many separate
+    // thin/sharp trouble spots (VGs, sharp edges) that exclusion cascaded
+    // and collapsed layer coverage almost everywhere (frontVent/sideSkirt
+    // dropped out of the layers table entirely). Reverted to 0.
+    nGrow                  0;
+    featureAngle           130;
+    nRelaxIter              5;
+    nSmoothSurfaceNormals   3;
+    nSmoothNormals          5;
+    nSmoothThickness       10;
+    maxFaceThicknessRatio  0.5;
+    maxThicknessToMedialRatio 0.3;
+    minMedialAxisAngle      80;
+    nBufferCellsNoExtrude   0;
+    nLayerIter             50;
+}
+
+meshQualityControls
+{
+    maxNonOrtho 65;
+    maxBoundarySkewness 20;
+    maxInternalSkewness 4;
+    maxConcave 80;
+    minVol 1e-13;
+    minTetQuality 1e-9;
+    minArea -1;
+    minTwist 0.02;
+    minDeterminant 0.001;
+    minFaceWeight 0.02;
+    minVolRatio 0.01;
+    minTriangleTwist -1;
+
+    nSmoothScale 4;
+    errorReduction 0.75;
+}
+
+writeFlags
+(
+    scalarLevels
+    layerSets
+    layerFields
+);
+
+mergeTolerance 1e-6;
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

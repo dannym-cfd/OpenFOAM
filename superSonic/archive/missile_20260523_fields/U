@@ -1,0 +1,46 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volVectorField;
+    object      U;
+}
+
+dimensions      [0 1 -1 0 0 0 0];
+
+internalField   uniform (0 0 -100);
+
+boundaryField
+{
+    "missile_zone.*"
+    {
+        type            noSlip;
+    }
+
+    farfield_inflow
+    {
+        type            uniformFixedValue;
+        uniformValue    table
+        (
+            (0       (0 0 -100))
+			(200     (0 0 -110))   
+			(500     (0 0 -130))
+			(1000    (0 0 -160))
+			(1500    (0 0 -210))
+			(2000    (0 0 -250))
+			(3000    (0 0 -281.056))
+			(10000   (0 0 -281.056))
+        );
+    }
+
+    farfield_outflow
+    {
+        type pressureInletOutletVelocity; 
+		value uniform (0 0 -281.056);
+    }
+
+    sides
+    {
+        type            slip;
+    }
+}

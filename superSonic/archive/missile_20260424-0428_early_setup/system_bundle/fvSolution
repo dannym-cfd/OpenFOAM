@@ -1,0 +1,77 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      fvSolution;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+solvers
+{
+    "p.*"
+    {
+        solver          amgx;
+        tolerance       1e-6;
+        relTol          0.01;
+
+        // amgx4Foam config: "Cfg" reads amgxCfgOptions (INI format),
+        // "Json" reads amgxOptions (JSON format). Cfg is preferred for
+        // AMG+PCG with aggregation — matches your amgxCfgOptions setup.
+        amgx
+        {
+            dict    Cfg;
+        }
+    }
+
+    "rho.*"
+    {
+        solver          diagonal;
+    }
+
+    "(U|e|h|k|omega|alphat).*"
+    {
+        solver          PBiCGStab;
+        preconditioner  DILU;
+        tolerance       1e-6;
+        relTol          0.01;
+    }
+}
+
+PIMPLE
+{
+    nOuterCorrectors            2;
+    nCorrectors                 2;
+    nNonOrthogonalCorrectors    1;
+    consistent                  yes;
+    SIMPLErho                   no;
+
+    adjustTimeStep              yes;
+//    maxCo                       0.5;
+//    maxDeltaT                   5e-5;
+
+    residualControl
+    {
+        p               1e-5;
+        U               1e-5;
+        h               1e-5;
+        "(k|omega)"     1e-4;
+    }
+}
+
+relaxationFactors
+{
+    fields
+    {
+        p               0.3;
+        rho             0.5;
+    }
+    equations
+    {
+        U       0.9;
+        h       0.9;
+        e       0.9;
+        k       0.7;
+        omega   0.7;
+    }
+}

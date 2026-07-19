@@ -1,0 +1,116 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2512                                  |
+|   \\  /    A nd           |                                                 |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      blockMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// Half-car virtual wind tunnel.
+// Axes (from the supplied STL bounding boxes): X = lateral (symmetry at
+// X=0), Y = streamwise (car nose at Y=0, tail at Y=3.9), Z = vertical
+// (ground at Z=-0.374, roof at Z=0.75).
+//
+// Domain: X 0 -> 5          (far-field ~4.2 half-widths past the car)
+//         Y -15 -> 35       (~4 car lengths upstream, ~8 downstream for wake)
+//         Z -0.374 -> 5.2   (~5 car heights of clearance above the road)
+
+convertToMeters 1;
+
+xmin   0;
+xmax   5;
+ymin   -15;
+ymax   35;
+zmin   -0.374;
+zmax   5.2;
+
+// Background cell size ~0.5 m; snappyHexMesh adds refinement near the car.
+nx     10;
+ny     100;
+nz     11;
+
+vertices
+(
+    ($xmin $ymin $zmin)
+    ($xmax $ymin $zmin)
+    ($xmax $ymax $zmin)
+    ($xmin $ymax $zmin)
+    ($xmin $ymin $zmax)
+    ($xmax $ymin $zmax)
+    ($xmax $ymax $zmax)
+    ($xmin $ymax $zmax)
+);
+
+blocks
+(
+    hex (0 1 2 3 4 5 6 7) ($nx $ny $nz) simpleGrading (1 1 1)
+);
+
+edges
+(
+);
+
+boundary
+(
+    symmetry
+    {
+        type symmetryPlane;
+        faces
+        (
+            (0 4 7 3)
+        );
+    }
+    farField
+    {
+        type patch;
+        faces
+        (
+            (1 2 6 5)
+        );
+    }
+    inlet
+    {
+        type patch;
+        faces
+        (
+            (0 1 5 4)
+        );
+    }
+    outlet
+    {
+        type patch;
+        faces
+        (
+            (3 7 6 2)
+        );
+    }
+    ground
+    {
+        type wall;
+        faces
+        (
+            (0 3 2 1)
+        );
+    }
+    top
+    {
+        type patch;
+        faces
+        (
+            (4 5 6 7)
+        );
+    }
+);
+
+mergePatchPairs
+(
+);
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

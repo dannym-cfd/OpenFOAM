@@ -1,0 +1,52 @@
+#!/bin/bash
+cd "${0%/*}" || exit 1
+
+# Snapshots the case's configuration files (never the bulky generated mesh/
+# solution data) to Desktop/CFD/cases/car/archive/, timestamped and named
+# with the case name. Two modes:
+#
+#   ./Allarchive                  - full case snapshot (all dictionaries +
+#                                    scripts) - use for "everything is
+#                                    working" checkpoints.
+#   ./Allarchive <description>    - targeted snapshot of just system/ (BC/
+#                                    solver/mesher dictionaries) - use right
+#                                    before a major settings change so the
+#                                    prior working config isn't lost.
+
+CASE_NAME="car"
+WIN_ARCHIVE_DIR="/mnt/c/Users/FixAdmin/Desktop/CFD/cases/car/archive"
+TS=$(date '+%Y%m%d_%H%M%S')
+
+log() { echo "[$(date '+%H:%M:%S')] $*"; }
+
+if [ ! -d "$WIN_ARCHIVE_DIR" ]; then
+    log "ERROR: $WIN_ARCHIVE_DIR not found"
+    exit 1
+fi
+
+description="$1"
+
+if [ -n "$description" ]; then
+    # Targeted snapshot: just the dictionaries most relevant to a BC/
+    # solver/mesher change (system/ covers controlDict, fvSchemes,
+    # fvSolution, snappyHexMeshDict, forceCoeffs1, decomposeParDict, etc.)
+    outDir="$WIN_ARCHIVE_DIR/${CASE_NAME}_${TS}_${description}"
+    mkdir -p "$outDir"
+    cp -r system "$outDir/"
+    cp -r 0.orig "$outDir/"
+    log "Targeted snapshot ('$description') saved to $outDir"
+else
+    # Full case snapshot: every dictionary + top-level scripts + the
+    # source STLs (small, and combined with system/snappyHexMeshDict etc.
+    # the mesh can always be regenerated via Allmesh) - but not the
+    # generated constant/polyMesh itself, and not processor*/ or
+    # postProcessing/ solution data (large, regenerable/re-solvable).
+    outDir="$WIN_ARCHIVE_DIR/${CASE_NAME}_${TS}_full"
+    mkdir -p "$outDir/constant/triSurface"
+    cp -r system "$outDir/"
+    cp -r 0.orig "$outDir/"
+    cp Allsolve Allmesh Allarchive Clearall "$outDir/" 2>/dev/null
+    find constant -maxdepth 1 -type f -exec cp {} "$outDir/constant/" \;
+    cp constant/triSurface/*.stl "$outDir/constant/triSurface/" 2>/dev/null
+    log "Full case snapshot (incl. triSurface STLs, excl. mesh) saved to $outDir"
+fi

@@ -1,0 +1,6 @@
+# Global PETSc options, loaded once at PetscInitialize (see petscControls.C).
+#
+# System OpenMPI is not CUDA-aware (GPU-direct RDMA) - fine here since this
+# is a single GPU on a single node, so just stage transfers via host memory
+# instead of erroring out.
+-use_gpu_aware_mpi 0

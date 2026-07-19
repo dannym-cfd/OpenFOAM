@@ -1,0 +1,42 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  13
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      fvModels;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+/*
+buoyancy
+{
+    type            buoyancy;
+    active          yes;
+    selectionMode   all;
+}
+*/
+rampVelocity
+{
+    type                velocityConstraint;
+    active              yes;
+    velocityConstraintCoeffs
+    {
+        selectionMode   all;
+        field           U;
+        timeFunction    linearRamp;
+        ramp
+        {
+            start       0;
+            duration    400;
+            startValue  0;
+            endValue    1;
+        }
+        targetVelocity  (0 0 -350);
+    }
+}

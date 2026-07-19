@@ -1,0 +1,13 @@
+{
+    "config_version": 2, 
+    "solver": {
+        "preconditioner": {
+            "solver": "JACOBI",
+            "scope": "main"
+        }, 
+        "solver": "PCG", 
+        "max_iters": 100, 
+        "tolerance": 1e-06, 
+        "scope": "main"
+    }
+}

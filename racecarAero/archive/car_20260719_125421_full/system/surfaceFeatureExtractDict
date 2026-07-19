@@ -1,0 +1,76 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2512                                  |
+|   \\  /    A nd           |                                                 |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      surfaceFeatureExtractDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+body.stl
+{
+    extractionMethod    extractFromSurface;
+    includedAngle       150;
+    writeObj            no;
+}
+
+frontwheel.stl
+{
+    extractionMethod    extractFromSurface;
+    includedAngle       150;
+    writeObj            no;
+}
+
+backwheel.stl
+{
+    extractionMethod    extractFromSurface;
+    includedAngle       150;
+    writeObj            no;
+}
+
+mirror.stl
+{
+    extractionMethod    extractFromSurface;
+    includedAngle       150;
+    writeObj            no;
+}
+
+frontvent.stl
+{
+    extractionMethod    extractFromSurface;
+    includedAngle       150;
+    writeObj            no;
+}
+
+sideskirt.stl
+{
+    extractionMethod    extractFromSurface;
+    includedAngle       150;
+    writeObj            no;
+}
+
+vg1.stl { extractionMethod extractFromSurface; includedAngle 150; writeObj no; }
+vg2.stl { extractionMethod extractFromSurface; includedAngle 150; writeObj no; }
+vg3.stl { extractionMethod extractFromSurface; includedAngle 150; writeObj no; }
+vg4.stl { extractionMethod extractFromSurface; includedAngle 150; writeObj no; }
+vg5.stl { extractionMethod extractFromSurface; includedAngle 150; writeObj no; }
+vg6.stl { extractionMethod extractFromSurface; includedAngle 150; writeObj no; }
+
+engsim.stl
+{
+    extractionMethod    extractFromSurface;
+    includedAngle       150;
+    writeObj            no;
+}
+
+diffuserfin.stl { extractionMethod extractFromSurface; includedAngle 150; writeObj no; }
+rearspoiler.stl { extractionMethod extractFromSurface; includedAngle 150; writeObj no; }
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

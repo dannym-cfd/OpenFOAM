@@ -1,0 +1,117 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2512                                  |
+|   \\  /    A nd           |                                                 |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    object      nut;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 2 -1 0 0 0 0];
+
+internalField   uniform 0.132;
+
+boundaryField
+{
+    inlet
+    {
+        type            calculated;
+        value           uniform 0.132;
+    }
+
+    outlet
+    {
+        type            calculated;
+        value           uniform 0.132;
+    }
+
+    ground
+    {
+        type            nutkWallFunction;
+        value           uniform 0;
+    }
+
+    top
+    {
+        type            slip;
+    }
+
+    farField
+    {
+        type            slip;
+    }
+
+    symmetry
+    {
+        type            symmetryPlane;
+    }
+
+    "body_.*"
+    {
+        type            nutkWallFunction;
+        value           uniform 0;
+    }
+
+    mirror
+    {
+        type            nutkWallFunction;
+        value           uniform 0;
+    }
+
+    "frontVent.*"
+    {
+        type            nutkWallFunction;
+        value           uniform 0;
+    }
+
+    "sideSkirt.*"
+    {
+        type            nutkWallFunction;
+        value           uniform 0;
+    }
+
+    "vg.*"
+    {
+        type            nutkWallFunction;
+        value           uniform 0;
+    }
+
+    "diffuserFin.*"
+    {
+        type            nutkWallFunction;
+        value           uniform 0;
+    }
+
+    rearSpoiler
+    {
+        type            nutkWallFunction;
+        value           uniform 0;
+    }
+
+    "engSim.*"
+    {
+        type            calculated;
+        value           uniform 0.132;
+    }
+
+    "frontWheel_.*"
+    {
+        type            nutkWallFunction;
+        value           uniform 0;
+    }
+
+    "backWheel_.*"
+    {
+        type            nutkWallFunction;
+        value           uniform 0;
+    }
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

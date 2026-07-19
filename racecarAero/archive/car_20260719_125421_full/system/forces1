@@ -1,0 +1,28 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2512                                  |
+|   \\  /    A nd           |                                                 |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      forces1;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// Standalone functionObject config for: simpleFoam -postProcess -funcs '(forceCoeffs1 forces1)'
+
+type            forces;
+libs            (forces);
+
+patches         ("body_.*" "frontWheel_.*" "backWheel_.*" mirror "frontVent.*" "sideSkirt.*" "vg.*" "diffuserFin.*" rearSpoiler);
+
+rho             rhoInf;
+rhoInf          1.225;
+
+CofR            (0.425 1.95 0);
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

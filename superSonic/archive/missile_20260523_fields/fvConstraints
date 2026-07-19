@@ -1,0 +1,36 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      fvConstraints;
+}
+
+limitp
+{
+    type        limitPressure;
+    min         5000;
+    max         300000;
+}
+
+limitT
+{
+    type        limitTemperature;
+    cellZone    all;
+    min         150;
+    max         800;
+}
+
+limitU
+{
+    type        limitVelocity;
+    max         1000;
+}
+
+limitTurbulence
+{
+    type            limitTurbulenceFields;
+    fields          (k omega);
+    kMin            1e-10;
+    omegaMin        1e-2;
+}

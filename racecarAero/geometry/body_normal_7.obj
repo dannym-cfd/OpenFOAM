@@ -1,0 +1,23 @@
+# Wavefront OBJ file written 2026-07-19T12:26:21
+o body_normal_7
+
+# points : 3
+# faces  : 2
+# zones  : 3
+#   0  patch0  (nFaces: 0)
+#   1  patch1  (nFaces: 2)
+#   2  patch2  (nFaces: 0)
+
+# <points count="3">
+v 0.243549 0.504069 0.144707
+v 0.216546 0.482069 0.137509
+v 0.216541 0.48206 0.137507
+# </points>
+
+# <faces count="2">
+g patch0
+g patch1
+f 3 2 1
+f 2 3 1
+g patch2
+# </faces>

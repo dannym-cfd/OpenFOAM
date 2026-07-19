@@ -1,0 +1,23 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      surfaceFeatureExtractDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// v2512 uses surfaceFeatureExtract + this dict (Foundation v13 uses
+// surfaceFeatures + surfaceFeaturesDict instead — do not use that in v2512).
+//
+// Fixed: original had obxtRev1.stl which mismatches missile.stl used
+// everywhere else (snappyHexMeshDict, surfaceFeaturesDict, forceCoeffs).
+
+missile.stl
+{
+    extractionMethod    extractFromSurface;
+    includedAngle       150;
+    writeObj            yes;
+}
+
+// ************************************************************************* //

@@ -1,0 +1,80 @@
+#!/bin/bash
+cd "${0%/*}" || exit 1
+
+. /usr/lib/openfoam/openfoam2512/etc/bashrc 2>/dev/null
+
+# --------------------------------------------------------------------------- #
+mkdir -p log
+
+TS=$(date '+%Y%m%d_%H%M%S')
+
+log() { echo "[$(date '+%H:%M:%S')] $*"; }
+
+run()
+{
+    local app=$1; shift
+    log "Running $app $*"
+    $app "$@" 2>&1 | tee "log/${app}_${TS}.log"
+    local rc=${PIPESTATUS[0]}
+    [ $rc -ne 0 ] && { log "ERROR: $app failed (exit $rc)"; exit $rc; }
+}
+
+clean_identifiers()
+{
+    log "Removing Zone.Identifier files..."
+    find . -name '*:Zone.Identifier' -delete
+}
+
+run_snappy()
+{
+    log "Running snappyHexMesh on 12 procs..."
+    mpirun -np 12 snappyHexMesh -parallel -overwrite 2>&1 | tee "log/snappyHexMesh_${TS}.log"
+    local rc=${PIPESTATUS[0]}
+    [ $rc -ne 0 ] && { log "ERROR: snappyHexMesh failed (exit $rc)"; exit $rc; }
+}
+
+# --------------------------------------------------------------------------- #
+# Parse flags
+# --------------------------------------------------------------------------- #
+mesh_only=false
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        -mesh) mesh_only=true ;;
+        *) echo "Unknown flag: $1"; exit 1 ;;
+    esac
+    shift
+done
+
+# --------------------------------------------------------------------------- #
+# -mesh: just run snappyHexMesh on existing decomposed blockMesh
+# --------------------------------------------------------------------------- #
+if [ "$mesh_only" = true ]; then
+    clean_identifiers
+    run_snappy
+    run reconstructParMesh -constant
+    log "Done — mesh in constant/polyMesh"
+    exit 0
+fi
+
+# --------------------------------------------------------------------------- #
+# Full workflow
+# --------------------------------------------------------------------------- #
+clean_identifiers
+
+log "Cleaning old mesh and processor files..."
+rm -rf processor*/
+rm -rf constant/polyMesh/
+rm -rf constant/extendedFeatureEdgeMesh/
+rm -f  constant/triSurface/*.eMesh
+
+run blockMesh
+run surfaceFeatureExtract
+run decomposePar
+
+run_snappy
+
+run reconstructParMesh -constant
+
+touch mesh.foam
+log "Done — mesh in constant/polyMesh"

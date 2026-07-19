@@ -1,0 +1,120 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2512                                  |
+|   \\  /    A nd           |                                                 |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    object      k;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// k = 1.5*(U*I)^2 with U = 50 m/s, turbulence intensity I = 5%
+
+dimensions      [0 2 -2 0 0 0 0];
+
+internalField   uniform 9.375;
+
+boundaryField
+{
+    inlet
+    {
+        type            fixedValue;
+        value           uniform 9.375;
+    }
+
+    outlet
+    {
+        type            inletOutlet;
+        inletValue      uniform 9.375;
+        value           uniform 9.375;
+    }
+
+    ground
+    {
+        type            kqRWallFunction;
+        value           uniform 9.375;
+    }
+
+    top
+    {
+        type            slip;
+    }
+
+    farField
+    {
+        type            slip;
+    }
+
+    symmetry
+    {
+        type            symmetryPlane;
+    }
+
+    "body_.*"
+    {
+        type            kqRWallFunction;
+        value           uniform 9.375;
+    }
+
+    mirror
+    {
+        type            kqRWallFunction;
+        value           uniform 9.375;
+    }
+
+    "frontVent.*"
+    {
+        type            kqRWallFunction;
+        value           uniform 9.375;
+    }
+
+    "sideSkirt.*"
+    {
+        type            kqRWallFunction;
+        value           uniform 9.375;
+    }
+
+    "vg.*"
+    {
+        type            kqRWallFunction;
+        value           uniform 9.375;
+    }
+
+    "diffuserFin.*"
+    {
+        type            kqRWallFunction;
+        value           uniform 9.375;
+    }
+
+    rearSpoiler
+    {
+        type            kqRWallFunction;
+        value           uniform 9.375;
+    }
+
+    "engSim.*"
+    {
+        // Flow boundary now, not a wall - one-directional extraction, no
+        // backflow risk to guard against, so plain zeroGradient is enough.
+        type            zeroGradient;
+    }
+
+    "frontWheel_.*"
+    {
+        type            kqRWallFunction;
+        value           uniform 9.375;
+    }
+
+    "backWheel_.*"
+    {
+        type            kqRWallFunction;
+        value           uniform 9.375;
+    }
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

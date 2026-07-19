@@ -1,0 +1,40 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volVectorField;
+    object      U;
+}
+
+dimensions      [0 1 -1 0 0 0 0];
+
+internalField   uniform (0 0 -281.056);
+
+boundaryField
+{
+    "missile_zone.*"
+    {
+        type            noSlip;
+    }
+
+    farfield_inflow
+    {
+        type            freestreamVelocity;
+        freestreamValue uniform (0 0 -281.056);
+        value           uniform (0 0 -281.056);
+    }
+
+    farfield_outflow
+    {
+        type            inletOutlet;
+        inletValue      uniform (0 0 -281.056);
+        value           uniform (0 0 -281.056);
+    }
+
+    sides
+    {
+        type            freestreamVelocity;
+        freestreamValue uniform (0 0 -281.056);
+        value           uniform (0 0 -281.056);
+    }
+}

@@ -1,0 +1,116 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2512                                  |
+|   \\  /    A nd           |                                                 |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      fvSolution;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+solvers
+{
+    p
+    {
+        // GPU-accelerated pressure solve: direct AmgX integration via
+        // amgx4Foam + foam2csr (not PETSc's PCAMGX wrapper). Reads its raw
+        // AmgX JSON config from system/amgxpOptions (packageName "amgx" +
+        // dict "p" + "Options"). Builds AmgX's resources once on the first
+        // solve and only refreshes matrix values afterward - no per-timestep
+        // preconditioner rebuild churn.
+        solver          amgx;
+
+        amgx
+        {
+            dict p;
+
+            caching
+            {
+                matrix
+                {
+                    update always;
+                }
+            }
+        }
+
+        tolerance       1e-7;
+        relTol          0.05;
+    }
+
+    // Final pressure corrector within each PIMPLE outer loop - same AmgX
+    // matrix/config as p, just driven to full tolerance (relTol 0) since
+    // there's no further outer correction to clean up its error.
+    pFinal
+    {
+        $p;
+        relTol          0;
+    }
+
+    "(U|k|omega)"
+    {
+        solver          smoothSolver;
+        smoother        GaussSeidel;
+        tolerance       1e-8;
+        relTol          0.1;
+    }
+
+    "(U|k|omega)Final"
+    {
+        solver          smoothSolver;
+        smoother        GaussSeidel;
+        tolerance       1e-8;
+        relTol          0;
+    }
+
+    // For potentialFoam - a cheap CPU-only Laplace solve, one-off
+    // pre-processing step, no need for GPU/AmgX here.
+    Phi
+    {
+        solver          GAMG;
+        smoother        GaussSeidel;
+        tolerance       1e-6;
+        relTol          0.01;
+    }
+}
+
+SIMPLE
+{
+    // SIMPLEC precursor on the new mesh - matches OpenFOAM's own motorBike
+    // tutorial settings that worked well before.
+    nNonOrthogonalCorrectors 0;
+    consistent      yes;
+}
+
+potentialFlow
+{
+    nNonOrthogonalCorrectors 10;
+}
+
+PIMPLE
+{
+    // Kept for the transient phase after this SIMPLE precursor settles -
+    // unused while application is simpleFoam.
+    nOuterCorrectors    3;
+    nCorrectors         2;
+    nNonOrthogonalCorrectors 0;
+}
+
+relaxationFactors
+{
+    // SIMPLEC - no "fields { p ... }" relaxation needed, U bumped to match
+    // the tutorial. (PIMPLE's own relaxation gets set again when switching
+    // back to the transient phase.)
+    equations
+    {
+        U               0.9;
+        "(k|omega)"     0.7;
+    }
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

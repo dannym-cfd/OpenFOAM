@@ -1,0 +1,38 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    object      nut;
+}
+
+dimensions      [0 2 -1 0 0 0 0];
+
+internalField   uniform 0.001820;
+
+boundaryField
+{
+    "missile_zone.*"
+    {
+        type            nutkWallFunction;
+        value           uniform 0;
+    }
+
+    farfield_inflow
+    {
+        type            calculated;
+        value           uniform 0.001820;
+    }
+
+    farfield_outflow
+    {
+        type            calculated;
+        value           uniform 0.001820;
+    }
+
+    sides
+    {
+        type            calculated;
+        value           uniform 0.001820;
+    }
+}

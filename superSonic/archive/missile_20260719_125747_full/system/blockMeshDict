@@ -1,0 +1,88 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM
+   \\    /   O peration     | Version:  v2512
+    \\  /    A nd           |
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      blockMeshDict;
+}
+
+// NOTE: convertToMeters assumes STL geometry is already in meters.
+convertToMeters 1;
+
+// Geometry orientation: nose tip at (0,0,0), missile points toward +z,
+// body/fins/tail extend toward -z (tail around z=-2).
+// Freestream U = (0,0,-281) m/s -> flow moves in -z direction, so it
+// approaches from the +z side (upstream of nose) and exits past the
+// tail into the wake at large negative z.
+//
+// Domain: 10m (x) x 10m (y) x 20m (z)
+//   x,y: -5 to 5   (lateral farfield, ~31 body diameters)
+//   z:   -10 (outflow/wake, ~4 body lengths aft of tail) to 10 (inflow, upstream of nose)
+//
+// Vertex layout (right-handed: 0->1 = +x, 0->3 = +y, 0->4 = +z):
+vertices
+(
+    (-5 -5 -10)   // 0
+    ( 5 -5 -10)   // 1
+    ( 5  5 -10)   // 2
+    (-5  5 -10)   // 3
+    (-5 -5  10)   // 4
+    ( 5 -5  10)   // 5
+    ( 5  5  10)   // 6
+    (-5  5  10)   // 7
+);
+
+// Background cell size: 0.4m
+// 25 x 25 x 50 = 31,250 background cells
+blocks
+(
+    hex (0 1 2 3 4 5 6 7) (25 25 50) simpleGrading (1 1 1)
+);
+
+edges
+();
+
+boundary
+(
+    farfield_inflow
+    {
+        // z = +10 face, upstream of the nose
+        type patch;
+        faces
+        (
+            (4 5 6 7)
+        );
+    }
+    farfield_outflow
+    {
+        // z = -18 face, downstream of the tail/wake
+        type patch;
+        faces
+        (
+            (0 1 2 3)
+        );
+    }
+    sides
+    {
+        type patch;
+        faces
+        (
+            (0 3 7 4)   // x = -8
+            (1 2 6 5)   // x = +8
+            (0 1 5 4)   // y = -8
+            (3 2 6 7)   // y = +8
+        );
+    }
+);
+
+mergePatchPairs
+();
+
+// ************************************************************************* //

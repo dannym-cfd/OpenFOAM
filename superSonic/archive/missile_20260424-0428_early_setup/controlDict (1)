@@ -1,0 +1,67 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// v2512: foamRun/solver fluid is Foundation-only syntax.
+// rhoPimpleFoam is the direct equivalent for transient compressible PIMPLE.
+application     rhoPimpleFoam;
+
+startFrom       startTime;
+startTime       0;
+stopAt          endTime;
+endTime         0.5;
+deltaT          1e-5;
+writeControl    timeStep;
+writeInterval   50;
+purgeWrite      10;
+writeFormat     binary;
+writePrecision  8;
+adjustTimeStep  yes;
+maxCo           1.0;
+maxDeltaT       0.1;
+
+libs
+(
+    // Update this path after recompiling amgx4Foam against v2512.
+    // Source at: https://gitlab.com/openfoam/external-solver
+    // Expected location once compiled:
+    "/home/danny/OpenFOAM/danny-v2512/platforms/linux64GccDPInt32Opt/lib/libamgx4Foam.so"
+);
+
+functions
+{
+    forceCoeffs
+    {
+        type            forceCoeffs;
+        libs            ("libforces.so");
+
+        patches         ( "missile.*" );
+        rho             rho;
+        rhoInf          1.225;
+        magUInf         350;
+        Aref            0.007543;
+        lRef            0.098;
+        CofR            (0 0 0);
+        dragDir         (0 0 -1);
+        liftDir         (1 0 0);
+        pitchAxis       (0 1 0);
+    }
+
+    fieldAverage
+    {
+        type            fieldAverage;
+        libs            ("libfieldFunctionObjects.so");
+        writeControl    writeTime;
+        timeStart       0.02;
+        fields
+        (
+            U { mean on; prime2Mean off; base time; }
+            p { mean on; prime2Mean off; base time; }
+        );
+    }
+}

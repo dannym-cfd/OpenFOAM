@@ -1,0 +1,58 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      blockMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+scale   1;
+
+vertices
+(
+    (-15 -15 -40)   
+    ( 15 -15 -40)
+    ( 15  15 -40)
+    (-15  15 -40)
+    (-15 -15  15)
+    ( 15 -15  15)
+    ( 15  15  15)
+    (-15  15  15)
+);
+
+blocks
+(
+    hex (0 1 2 3 4 5 6 7) (50 50 110) simpleGrading (1 1 1)
+);
+
+edges ();
+
+boundary
+(
+    farfield_inflow
+    {
+        type patch; // This is the TOP face (Z max)
+        faces ( (4 5 6 7) );
+    }
+    farfield_outflow
+    {
+        type patch; // This is the BOTTOM face (Z min)
+        faces ( (0 1 2 3) );
+    }
+    sides
+    {
+        type patch; // All other side faces
+        faces
+        (
+            (0 4 7 3)
+            (1 2 6 5)
+            (0 1 5 4)
+            (2 3 7 6)
+        );
+    }
+);

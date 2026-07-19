@@ -1,0 +1,62 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2512                                  |
+|   \\  /    A nd           |                                                 |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// New geometry (VGs + engSim intake, new mesh) - back to simpleFoam (steady
+// RANS) as a precursor: converge/settle the flow field cheaply first, then
+// switch to pimpleFoam -latestTime for the transient phase once this
+// settles, same workflow as every previous geometry change.
+application     simpleFoam;
+
+startFrom       latestTime;
+
+startTime       0;
+
+stopAt          endTime;
+
+endTime         2000;
+
+deltaT          1;
+
+writeControl    timeStep;
+
+writeInterval   200;
+
+purgeWrite      3;
+
+writeFormat     binary;
+
+writePrecision  7;
+
+writeCompression off;
+
+timeFormat      general;
+
+// 6 wasn't enough significant figures to represent small deltaT increments
+// on top of a 4-digit base time (2000.000364 rounds to 2000.00 -> displays
+// and writes as just "2000" every step, silently colliding writes into the
+// same time directory). Bumped to cover down to ~1e-4s increments at this
+// time scale.
+timePrecision   10;
+
+runTimeModifiable true;
+
+libs (amgx4Foam);
+
+// forceCoeffs1/forces1 intentionally not run here every timestep - use
+// `./Allsolve -forceCoeffs` (reads system/forceCoeffs1 and system/forces1)
+// to compute them on demand instead.
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

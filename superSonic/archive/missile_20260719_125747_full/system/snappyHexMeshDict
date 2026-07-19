@@ -1,0 +1,217 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM
+   \\    /   O peration     | Version:  v2512 
+    \\  /    A nd           |
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      snappyHexMeshDict;
+}
+
+// Which of the steps to run
+castellatedMesh true; 
+snap            true;
+addLayers       true;
+
+// ---------------------------------------------------------------------- //
+// Geometry
+// ---------------------------------------------------------------------- //
+geometry
+{
+    nose.stl
+    {
+        type triSurfaceMesh;
+        name nose;
+    }
+    fuselage.stl
+    {
+        type triSurfaceMesh;
+        name fuselage;
+    }
+    bodyFins.stl
+    {
+        type triSurfaceMesh;
+        name bodyFins;
+    }
+    boosterFins.stl
+    { 
+        type triSurfaceMesh;
+        name boosterFins;
+    }
+
+    // Refinement box around the whole vehicle + near wake
+    // Adjust extents to comfortably enclose body + fins + a bit of wake
+    vehicleRefineBox
+    {
+        type searchableBox;
+        min (-1.2 -1.2 -2.1);
+        max (1.2  1.2  0.1);
+    }
+};
+
+// ---------------------------------------------------------------------- //
+// Castellated mesh controls
+// ---------------------------------------------------------------------- //
+castellatedMeshControls
+{
+    maxLocalCells      3000000;
+    maxGlobalCells     14000000;
+    minRefinementCells 10;
+    maxLoadUnbalance   0.10;
+    nCellsBetweenLevels 4;
+
+    features
+    (
+        { file "nose.eMesh";        level 6; }
+        { file "fuselage.eMesh";    level 6; }
+        { file "bodyFins.eMesh";    level 8; }
+        { file "boosterFins.eMesh"; level 8; }
+    );
+
+    refinementSurfaces
+    {
+        nose
+        {
+            level (6 7);
+            patchInfo { type wall; }
+        }
+        fuselage
+        {
+            level (5 6);
+            patchInfo { type wall; }
+        }
+        bodyFins
+        {
+            level (7 8);
+            patchInfo { type wall; }
+        }
+        boosterFins
+        {
+            level (7 8);
+            patchInfo { type wall; }
+        }
+    }
+
+    resolveFeatureAngle 20;
+
+    refinementRegions
+    {
+        vehicleRefineBox
+        {
+            mode inside;
+            levels ((1e15 3));
+        }
+    }
+
+    locationInMesh (-4 -4 -4);
+
+    allowFreeStandingZoneFaces true;
+}
+
+snapControls
+{
+    nSmoothPatch    3;
+    tolerance       2.0;
+    nSolveIter      50;
+    nRelaxIter      5;
+
+    nFeatureSnapIter      10;
+    implicitFeatureSnap   false;
+    explicitFeatureSnap   true;
+    multiRegionFeatureSnap false;
+}
+
+addLayersControls
+{
+    relativeSizes false;
+
+    layers
+    {
+        "nose.*"
+        {
+            nSurfaceLayers 0;
+//            firstLayerThickness 0.000075;
+//            featureAngle 50;
+        }
+        "fuselage.*"
+        {
+            nSurfaceLayers 20;
+            featureAngle 50;
+        }
+        "bodyFins.*"
+        {
+            nSurfaceLayers 12;
+        }
+        "boosterFins.*"
+        {
+            nSurfaceLayers 12;
+        }
+    }
+
+    firstLayerThickness 0.00015;
+    expansionRatio      1.1;
+    minThickness        0.000003;
+
+    featureAngle 60;
+    nGrow        0;
+
+    // Layer termination / quality controls
+    maxFaceThicknessRatio   0.5;
+    maxThicknessToMedialRatio 0.3;
+    minMedialAxisAngle      90;
+
+    nSmoothSurfaceNormals 3;
+    nSmoothNormals        5;
+    nSmoothThickness      10;
+
+    nRelaxIter    5;
+    nLayerIter    75;
+    nRelaxedIter  50;
+
+    nBufferCellsNoExtrude 0;
+}
+
+meshQualityControls
+{
+    maxNonOrtho       65;
+    maxBoundarySkewness 20;
+    maxInternalSkewness 4;
+    maxConcave        80;
+    minVol            1e-13;
+    minTetQuality     1e-9;
+    minArea           -1;
+    minTwist          0.02;
+    minDeterminant    0.001;
+    minFaceWeight     0.02;
+    minVolRatio       0.01;
+    minTriangleTwist  -1;
+
+    nSmoothScale    4;
+    errorReduction  0.75;
+
+    // Relaxed criteria used during layer addition
+    relaxed
+    {
+        maxNonOrtho       75;
+        maxBoundarySkewness 25;
+        maxInternalSkewness 6;
+        maxConcave        80;
+        minVol            1e-15;
+        minTetQuality     -1e30;
+        minArea           -1;
+        minTwist          -1;
+        minDeterminant    -1;
+        minFaceWeight     -1;
+        minVolRatio       -1;
+        minTriangleTwist  -1;
+    }
+}
+
+mergeTolerance 1e-6;
+
+// ************************************************************************* //

@@ -1,0 +1,45 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2512                                  |
+|   \\  /    A nd           |                                                 |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      forceCoeffs1;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// Standalone functionObject config for: simpleFoam -postProcess -funcs '(forceCoeffs1 forces1)'
+
+type            forceCoeffs;
+libs            (forces);
+
+// body/frontWheel/backWheel each get split into "<name>_patch0",
+// "<name>_patch1", etc. by snappyHexMesh - regex catches all of them.
+patches         ("body_.*" "frontWheel_.*" "backWheel_.*" mirror "frontVent.*" "sideSkirt.*" "vg.*" "diffuserFin.*" rearSpoiler);
+
+rho             rhoInf;
+rhoInf          1.225;
+
+liftDir         (0 0 1);
+dragDir         (0 1 0);
+pitchAxis       (1 0 0);
+
+CofR            (0.425 1.95 0);
+
+magUInf         50;
+lRef            3.9;
+
+// HALF-MODEL frontal area (symmetry plane at X=0). Using the half area
+// with the half-model force keeps Cd/Cl correct directly - do NOT double
+// this. To get full-car forces (not coefficients), double the raw
+// Fx/Fy/Fz from "forces1".
+// 9187.988 cm^2 (measured half-model frontal area) + 126 cm^2 (wheel
+// sticking out beyond that silhouette) = 9313.988 cm^2 = 0.9313988 m^2.
+Aref            0.9313988;
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

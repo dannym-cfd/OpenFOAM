@@ -1,0 +1,212 @@
+#!/bin/bash
+cd "${0%/*}" || exit 1
+
+. /usr/lib/openfoam/openfoam2512/etc/bashrc 2>/dev/null
+
+# GPU-accelerated pressure solve: amgx4Foam + foam2csr, a direct AmgX
+# integration (not PETSc's PCAMGX wrapper), over a CUDA-aware OpenMPI build
+# (the stock system OpenMPI has no CUDA support). Drop NPROCS if this hits
+# the same pinned-memory ceiling petsc4Foam did at higher rank counts.
+export PATH="/usr/local/cuda/bin:/home/danny/gpu-build/openmpi-cuda/bin:$PATH"
+export LD_LIBRARY_PATH="/usr/local/cuda/lib64:/home/danny/gpu-build/openmpi-cuda/lib:/home/danny/gpu-build/petsc-install-cudampi/lib:/home/danny/gpu-build/foam2csr-install/lib:$LD_LIBRARY_PATH"
+
+DECOMP_DICT=system/decomposeParDict.solve
+NPROCS=12
+
+# Standardized case layout: Desktop/CFD/cases/car/{archive,debug,geometry,test}
+WIN_TEST_DIR="/mnt/c/Users/FixAdmin/Desktop/CFD/cases/car/test"
+
+# --------------------------------------------------------------------------- #
+mkdir -p log
+
+TS=$(date '+%Y%m%d_%H%M%S')
+
+log() { echo "[$(date '+%H:%M:%S')] $*"; }
+
+run()
+{
+    local app=$1; shift
+    log "Running $app $*"
+    $app "$@" 2>&1 | tee "log/${app}_${TS}.log"
+    local rc=${PIPESTATUS[0]}
+    [ $rc -ne 0 ] && { log "ERROR: $app failed (exit $rc)"; exit $rc; }
+}
+
+clean_identifiers()
+{
+    log "Removing Zone.Identifier files..."
+    find . -name '*:Zone.Identifier' -delete
+}
+
+restore_0_dir()
+{
+    if [ ! -d 0 ]; then
+        log "Restoring 0/ from 0.orig/..."
+        cp -r 0.orig 0
+    fi
+}
+
+run_solver()
+{
+    local app
+    app=$(sed -n 's/^application[ \t]*\([A-Za-z]*\);/\1/p' system/controlDict)
+    log "Running $app on $NPROCS procs (CUDA-aware MPI + AmgX)..."
+    mpirun -np $NPROCS $app -parallel -decomposeParDict $DECOMP_DICT 2>&1 | tee "log/${app}_${TS}.log"
+    local rc=${PIPESTATUS[0]}
+    [ $rc -ne 0 ] && { log "ERROR: $app failed (exit $rc)"; exit $rc; }
+    touch data.foam
+    log "Done"
+}
+
+run_potential()
+{
+    log "Running potentialFoam on $NPROCS procs (irrotational initial guess)..."
+    mpirun -np $NPROCS potentialFoam -parallel -writep -decomposeParDict $DECOMP_DICT 2>&1 | tee "log/potentialFoam_${TS}.log"
+    local rc=${PIPESTATUS[0]}
+    [ $rc -ne 0 ] && { log "ERROR: potentialFoam failed (exit $rc)"; exit $rc; }
+}
+
+save_force_coeffs_to_test()
+{
+    if [ ! -d "$WIN_TEST_DIR" ]; then
+        log "WARNING: $WIN_TEST_DIR not found - skipping save to test folder"
+        return
+    fi
+    local latest
+    latest=$(ls -d postProcessing/forceCoeffs1/*/ 2>/dev/null | xargs -n1 basename | sort -g | tail -1)
+    if [ -z "$latest" ]; then
+        log "WARNING: no postProcessing/forceCoeffs1 results found - skipping save to test folder"
+        return
+    fi
+    local outDir="$WIN_TEST_DIR/${TS}_t${latest}"
+    mkdir -p "$outDir"
+    cp -f "postProcessing/forceCoeffs1/$latest/coefficient.dat" "$outDir/" 2>/dev/null
+    cp -f "postProcessing/forces1/$latest/force.dat" "$outDir/" 2>/dev/null
+    cp -f "postProcessing/forces1/$latest/moment.dat" "$outDir/" 2>/dev/null
+    log "Saved force coefficients (t=$latest) to $outDir"
+}
+
+# --------------------------------------------------------------------------- #
+# Parse flags
+# --------------------------------------------------------------------------- #
+solver_only=false
+latest_time=false
+force_coeffs=false
+export_only=false
+stop_gracefully=false
+start_time=""
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        -solver)      solver_only=true ;;
+        -latestTime)  latest_time=true ;;
+        -forceCoeffs) force_coeffs=true ;;
+        -export)      export_only=true ;;
+        -stop)        stop_gracefully=true ;;
+        -t*)          start_time="${1#-t}" ;;
+        *) echo "Unknown flag: $1"; exit 1 ;;
+    esac
+    shift
+done
+
+# --------------------------------------------------------------------------- #
+# -stop: request a clean shutdown of an ALREADY-RUNNING solve instead of
+# Ctrl+C. Flips stopAt to writeNow in controlDict (runTimeModifiable is on,
+# so the running solver picks this up), letting it finish the current
+# timestep, write results, and exit through its normal shutdown path -
+# which properly calls AmgX/CUDA cleanup instead of leaving the GPU driver
+# in a wedged state the way an abrupt SIGINT (Ctrl+C) has been doing.
+# --------------------------------------------------------------------------- #
+if [ "$stop_gracefully" = true ]; then
+    sed -i 's/^stopAt.*/stopAt          writeNow;/' system/controlDict
+    log "stopAt set to writeNow - solver will finish its current timestep, write, and exit cleanly"
+    log "(this can take a little while if mid-timestep - don't Ctrl+C, let it finish)"
+    exit 0
+fi
+
+# --------------------------------------------------------------------------- #
+# -export: reconstruct all decomposed time directories, then touch data.foam
+# --------------------------------------------------------------------------- #
+if [ "$export_only" = true ]; then
+    clean_identifiers
+    run reconstructPar
+    touch data.foam
+    log "Reconstructed — data.foam ready for ParaView"
+    exit 0
+fi
+
+# --------------------------------------------------------------------------- #
+# -forceCoeffs: run via simpleFoam -postProcess (builds full physics stack,
+# including turbulence model, needed for viscous force contribution — the
+# generic postProcess utility can't construct that on its own)
+# --------------------------------------------------------------------------- #
+if [ "$force_coeffs" = true ]; then
+    clean_identifiers
+    log "Running forceCoeffs via simpleFoam -postProcess..."
+    mpirun -np $NPROCS simpleFoam -postProcess -parallel -latestTime -decomposeParDict $DECOMP_DICT -funcs '(forceCoeffs1 forces1)' 2>&1 | tee "log/forceCoeffs_${TS}.log"
+    rc=${PIPESTATUS[0]}
+    [ $rc -ne 0 ] && { log "ERROR: forceCoeffs failed (exit $rc)"; exit $rc; }
+    log "Results in postProcessing/forceCoeffs1/"
+    save_force_coeffs_to_test
+    exit 0
+fi
+
+if [ "$solver_only" = true ]; then
+    clean_identifiers
+    restore_0_dir
+    sed -i 's/^stopAt.*/stopAt          endTime;/' system/controlDict
+    run_potential
+    run_solver
+    exit 0
+fi
+
+# --------------------------------------------------------------------------- #
+# -latestTime: restart from latest time in existing processor dirs
+# --------------------------------------------------------------------------- #
+if [ "$latest_time" = true ]; then
+    clean_identifiers
+    sed -i 's/^startFrom.*/startFrom       latestTime;/' system/controlDict
+    sed -i 's/^stopAt.*/stopAt          endTime;/' system/controlDict
+    log "startFrom set to latestTime, stopAt reset to endTime"
+    run_solver
+    exit 0
+fi
+
+# --------------------------------------------------------------------------- #
+# -tXXXX: restart from a specific timestep (e.g. -t1677 or -t1678.980105)
+# --------------------------------------------------------------------------- #
+if [ -n "$start_time" ]; then
+    if [ ! -d "processor0/$start_time" ]; then
+        log "ERROR: timestep '$start_time' not found"
+        log "Available timesteps:"
+        ls -d processor0/*/ 2>/dev/null | xargs -n1 basename | grep -E '^[0-9]' | sort -g
+        exit 1
+    fi
+    clean_identifiers
+    sed -i 's/^startFrom.*/startFrom       startTime;/' system/controlDict
+    sed -i "s/^startTime.*/startTime       $start_time;/" system/controlDict
+    sed -i 's/^stopAt.*/stopAt          endTime;/' system/controlDict
+    log "startFrom set to startTime=$start_time, stopAt reset to endTime"
+    run_solver
+    exit 0
+fi
+
+# --------------------------------------------------------------------------- #
+# Full workflow
+# --------------------------------------------------------------------------- #
+clean_identifiers
+restore_0_dir
+
+# Reset stopAt to endTime in case a previous `-stop` left stopAt=writeNow
+sed -i 's/^stopAt.*/stopAt          endTime;/' system/controlDict
+
+# Clean old processor dirs and solution time directories
+log "Cleaning old processor and solution time directories..."
+rm -rf processor*/
+find . -maxdepth 1 -regextype posix-extended -regex '\./[0-9]+(\.[0-9]+)?(e[+-]?[0-9]+)?' ! -name '0' -exec rm -rf {} +
+
+# Decompose snapped mesh (constant/polyMesh) + copy 0/ fields to processor dirs
+run decomposePar -decomposeParDict $DECOMP_DICT
+
+run_potential
+run_solver

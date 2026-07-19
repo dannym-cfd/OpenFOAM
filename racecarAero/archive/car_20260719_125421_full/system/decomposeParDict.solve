@@ -1,0 +1,25 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2512                                  |
+|   \\  /    A nd           |                                                 |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      decomposeParDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// Separate from system/decomposeParDict (used for meshing, 12-way CPU split).
+// The AmgX-accelerated pressure solve is confirmed working at 2 ranks sharing
+// the single RTX 3080; 4+ ranks hit unresolved memlock/hang limits in this
+// environment. Used by Allsolve via -decomposeParDict.
+
+numberOfSubdomains 12;
+
+method          scotch;
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

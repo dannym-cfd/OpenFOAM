@@ -1,0 +1,25 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2512                                  |
+|   \\  /    A nd           |                                                 |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      decomposeParDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Only used for meshing parallelism (snappyHexMesh) now - the solve runs
+// single-rank (serial) because AmgX's multi-rank-per-GPU mode hangs under
+// WSL2's GPU paravirtualization (no reliable CUDA IPC between processes).
+// Matches physical core count (12 physical / 24 logical with hyperthreading).
+numberOfSubdomains 12;
+
+method          scotch;
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

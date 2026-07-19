@@ -1,0 +1,42 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    object      p;
+}
+
+dimensions      [1 -1 -2 0 0 0 0];
+
+internalField   uniform 17308;
+
+boundaryField
+{
+    "missile_zone.*"
+    {
+        type            zeroGradient;
+    }
+
+    farfield_inflow
+    {
+        type            fixedValue;
+        value           uniform 17308;
+    }
+
+    farfield_outflow
+    {
+        type            waveTransmissive;
+        field           p;
+        psi             thermo:psi;
+        gamma           1.4;
+        fieldInf        17308;
+        lInf            500;
+        value           uniform 17308;
+    }
+
+    sides
+    {
+        type            freestreamPressure;
+        freestreamValue uniform 17308;
+    }
+}

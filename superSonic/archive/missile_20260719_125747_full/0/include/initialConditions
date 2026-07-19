@@ -1,0 +1,20 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2606                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+
+// ISA at 15.77 km, Mach 3.8115
+// T = 216.65 K (stratosphere), P = 10663 Pa, a = 295.1 m/s, U = 3.8115*295.1 = 1124.9 m/s
+// rho = P/(R*T) = 10663/(287.058*216.65) = 0.1714 kg/m^3
+// Turbulence: I=0.1%, k=1.5*(U*I)^2=1.9, epsilon=Cmu^0.75*k^1.5/L (L=0.01m)=43
+
+flowVelocity        (0 0 -1124.9);
+pressure            10663;
+temperature         216.65;
+turbulentKE         1.9;
+turbulentEpsilon    43;
+
+// ************************************************************************* //
