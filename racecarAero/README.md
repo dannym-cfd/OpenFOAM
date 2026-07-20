@@ -179,11 +179,11 @@ Cs ≈ -0.787 also appeared. This is expected for a half-model: true side
 force on a symmetric car is zero by construction, and a single-symmetry-plane
 mesh can't resolve that near-zero quantity meaningfully.
 
-![Initial residuals vs simulated time for simpleFoam, showing U, p, k, and omega residual traces plateauing before a transient excursion around t=950-1200 that self-corrects.](../assets/img/racecarAero-residuals.jpg)
+![Velocity and pressure slice through the car's symmetry plane, showing stagnation at the windshield peak and a low-velocity wake region trailing behind the car.](../assets/img/racecarAero-slice.jpg)
 
-*Residuals plateau rather than fully converging, motivating the transient
-PIMPLE run, with a large excursion around t≈950–1200 that self-corrects
-back to the same settled band.*
+*Symmetry-plane slice, velocity/pressure: stagnation (red) at the windshield
+peak, flow acceleration over the roofline, low-velocity wake (blue/teal)
+trailing behind the car.*
 
 ![Velocity and pressure contour on the car's symmetry plane, showing stagnation pressure at the nose and a low-velocity wake region extending behind the car.](../assets/img/racecarAero-velocity-pressure.jpg)
 
