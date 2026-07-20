@@ -6,7 +6,7 @@ pressure solve.
 
 | Cd | Cl | Freestream | Turbulence | Cores |
 |---|---|---|---|---|
-| 0.278 | -0.180 | 50 m/s | k-ω SST | 12 |
+| 0.308 | -0.595 | 50 m/s | k-ω SST | 12 |
 
 ## Problem & Goal
 
@@ -113,9 +113,10 @@ highest coverage (~87–93%), the VGs and mirror the lowest (~35–48%).*
 </tr>
 </table>
 
-*simpleFoam solve: simulated time vs. wall-clock (~0.395 sim-s/wall-s
-cumulative average), and per-field initial/final residuals over the full
-t=0–2000 run.*
+*simpleFoam solve on the final mesh: simulated time vs. wall-clock
+(~0.29 sim-s/wall-s cumulative average, ~7000s total), and per-field
+initial/final residuals over the full t=0–2000 run — including a large
+transient excursion around t≈950–1200 that self-corrects.*
 
 ## GPU Acceleration (AmgX)
 
@@ -165,27 +166,36 @@ AGGREGATION AMG preconditioner + PCG solver. `p` solver: `amgx`, tolerance
 
 ## Results
 
-Reference area 0.9314 m² (9187.988 cm² half-model + 126 cm² wheel overhang):
+Reference area 0.9314 m² (9187.988 cm² half-model + 126 cm² wheel overhang),
+converged result on the final mesh (3,799,277 cells):
 
 | Coefficient | Value |
 |---|---|
-| Cd | 0.278 |
-| Cl | -0.180 (net downforce) |
+| Cd | 0.308 (Cd(f) 0.181, Cd(r) 0.127) |
+| Cl | -0.595 (net downforce; Cl(f) -0.337, Cl(r) -0.258) |
+| CmPitch, CmRoll, CmYaw | -0.039, 0.027, -0.007 |
 
-Cs ≈ -0.807 also appeared. This is expected for a half-model: true side
+Cs ≈ -0.787 also appeared. This is expected for a half-model: true side
 force on a symmetric car is zero by construction, and a single-symmetry-plane
 mesh can't resolve that near-zero quantity meaningfully.
 
-![Initial residuals vs simulated time for simpleFoam, showing U, p, k, and omega residual traces plateauing around t=200-1940 before a transient excursion near t=1950 that self-corrects.](../assets/img/racecarAero-residuals.jpg)
+![Initial residuals vs simulated time for simpleFoam, showing U, p, k, and omega residual traces plateauing before a transient excursion around t=950-1200 that self-corrects.](../assets/img/racecarAero-residuals.jpg)
 
-*Residuals plateau from t≈200 onward rather than fully converging, motivating
-the transient PIMPLE run, with one excursion around t≈1941–1950 that
-self-corrects.*
+*Residuals plateau rather than fully converging, motivating the transient
+PIMPLE run, with a large excursion around t≈950–1200 that self-corrects
+back to the same settled band.*
 
 ![Velocity and pressure contour on the car's symmetry plane, showing stagnation pressure at the nose and a low-velocity wake region extending behind the car.](../assets/img/racecarAero-velocity-pressure.jpg)
 
-*Velocity/pressure on the symmetry plane, from an earlier mesh iteration
-predating the final VG/diffuser/spoiler geometry.*
+*Velocity/pressure on the symmetry plane, final geometry (VGs, diffuser,
+spoiler): stagnation pressure at the nose/windshield, low-velocity wake
+extending behind the car.*
+
+![Top-down streamline visualization over the race car, colored by velocity magnitude and pressure, showing flow attachment over the hood and windshield](../assets/img/racecarAero-streamlines-top.jpg)
+
+*Streamlines over the hood/windshield, colored by velocity magnitude:
+attached flow accelerating over the roofline, vortex structures shed off the
+A-pillars.*
 
 > Only 2 MPI ranks were formally validated as reliable with AmgX in isolated
 > testing (4 hung, 8+ crashed with pinned-memory errors). Production ran at
