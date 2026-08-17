@@ -16,6 +16,8 @@ Result: **Cd 0.278, Cl -0.180**. Details: [case study](racecarAero/).
 
 ![Streamline visualization over the race car, colored by surface pressure, on a black background](assets/img/racecarAero-streamline-render.jpg)
 
+![Front-on view of streamlines flowing over the race car, colored by velocity magnitude, with surface pressure on the body](assets/img/racecarAero-streamlines-front.jpg)
+
 ## Supersonic Missile Aerodynamics
 
 Two-stage boosted missile at Mach 3.8115, 15.77 km altitude, from a
