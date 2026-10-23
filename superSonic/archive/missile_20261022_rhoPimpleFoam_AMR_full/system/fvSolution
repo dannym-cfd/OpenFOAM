@@ -1,0 +1,88 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2606                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      fvSolution;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+solvers
+{
+    "rho.*"
+    {
+        solver          diagonal;
+    }
+
+    // rhoPimpleFoam's p matrix is symmetric (unlike sonicFoam's own
+    // phid/phiv-split formulation, which the previous PBiCGStab+DILU
+    // choice was tuned for) - DILU is an asymmetric-only preconditioner
+    // and errors here ("Unknown symmetric matrix preconditioner type
+    // DILU") once AMR refines the mesh and rebuilds the matrix. GAMG
+    // matches the referenced Wiki tutorial's own choice for p.
+    "p.*"
+    {
+        solver          GAMG;
+        smoother        GaussSeidel;
+        tolerance       1e-9;
+        relTol          0.01;
+    }
+
+    "(U|e).*"
+    {
+        $p;
+        tolerance       1e-9;
+    }
+
+    "(k|epsilon).*"
+    {
+        $p;
+        tolerance       1e-10;
+    }
+}
+
+PIMPLE
+{
+    // Mach 3.8: the pressure equation needs the compressible convective term.
+    transonic       yes;
+
+    pMinFactor      0.1;
+    pMaxFactor      4;
+
+    // Local time stepping to a steady state, as on the coarse mesh: every
+    // cell takes its own largest stable step and "time" counts iterations.
+    nOuterCorrectors 1;
+    nCorrectors      2;
+    nNonOrthogonalCorrectors 1;
+
+    maxCo           0.3;
+    rDeltaTSmoothingCoeff 0.05;
+    rDeltaTDampingCoeff 0.5;
+    maxDeltaT       1;
+}
+
+relaxationFactors
+{
+    // Modest relaxation as a stability margin for this first AMR+
+    // rhoPimpleFoam attempt on this case - not the tutorial's fully
+    // unrelaxed (".*" 1) steady-state setting. Retune once this is proven
+    // stable; may not be needed at all with nOuterCorrectors=3.
+    fields
+    {
+        p               0.5;
+    }
+    equations
+    {
+        ".*"            0.7;
+    }
+}
+
+
+// ************************************************************************* //

@@ -1,0 +1,263 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2606                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+application     rhoPimpleFoam;
+
+startFrom       latestTime;
+
+startTime       0;
+
+stopAt          endTime;
+
+endTime          1e+09;
+
+deltaT          1;
+
+writeControl    timeStep;
+
+writeInterval          100;
+
+purgeWrite          20;
+
+writeFormat    ascii;
+
+writePrecision          6;
+
+writeCompression    off;
+
+timeFormat    general;
+
+timePrecision   6;
+
+runTimeModifiable true;
+
+functions
+{
+    Co
+    {
+        type            CourantNo;
+        libs            (fieldFunctionObjects);
+        writeControl    writeTime;
+    }
+    CourantNo
+    {
+        type            fieldMinMax;
+        libs            (fieldFunctionObjects);
+        writeControl    timeStep;
+        writeInterval   1;
+        mode            magnitude;
+        fields          (Co);
+    }
+
+    continuityError
+    {
+        type            continuityError;
+        libs            (fieldFunctionObjects);
+        writeControl    timeStep;
+        writeInterval   1;
+    }
+
+    wallShearStress
+    {
+        type            wallShearStress;
+        libs            (fieldFunctionObjects);
+        writeControl    writeTime;
+    }
+
+    residuals
+    {
+        type            solverInfo;
+        libs            (utilityFunctionObjects);
+        fields          (".*");
+    }
+
+    // Writes the actual per-face y+ field (not just a log summary) into
+    // every write-time directory - lets logAnalyzer.m's "y+ histogram"
+    // mode read <time>/yPlus and plot the real distribution across the
+    // wall patches (nose/fuselage/bodyFins/boosterFins), not just a
+    // min/max/average line. writeControl outputTime piggybacks on the
+    // solver's own writeInterval/purgeWrite - no extra I/O cost beyond
+    // one more field per write.
+    yPlus1
+    {
+        type            yPlus;
+        libs            (fieldFunctionObjects);
+        executeControl  timeStep;
+        executeInterval 1;
+        writeControl    outputTime;
+    }
+
+    // Computes refineField = mag(grad(p)) * Vcell^(1/3) every timestep for
+    // dynamicRefineFvMesh (see constant/dynamicMeshDict) to refine on -
+    // following the OpenFOAM Wiki "AMR supersonic sphere Re300 Ma1dot2 by
+    // Michael Alletto" tutorial's mechanism. Wall-layer cells are shielded
+    // (refineField forced to 0 within ~10mm of any wall - conservatively
+    // above the thickest layer stack on this mesh: fuselage's 20 layers at
+    // firstLayerThickness 0.00015m/expansionRatio 1.1 sum to ~8.6mm) since
+    // refining layer cells is known to crash dynamicRefineFvMesh (the
+    // tutorial's own explicit finding). Uses actual wall distance
+    // (wallDist::New(mesh()).y()) rather than the tutorial's radius-from-
+    // origin trick, since that only works for a sphere centred at the
+    // origin - not this elongated body.
+    refineField
+    {
+        type            coded;
+        libs            ("libutilityFunctionObjects.so");
+        name            refineFieldFunction;
+
+        executeControl  timeStep;
+        executeInterval 1;
+        // timeStep/1 (not the original none, and not outputTime - which
+        // didn't fire under -postProcess either) - same pattern forceCoeffs
+        // below already uses successfully. writeControl alone gates whether
+        // THIS functionObject's own write() call fires; AUTO_WRITE on the
+        // field just means it WOULD be swept up by a write, not that it
+        // always gets one.
+        writeControl    timeStep;
+        writeInterval   1;
+
+        codeInclude
+        #{
+            #include "volFieldsFwd.H"
+            #include "wallDist.H"
+        #};
+
+        codeExecute
+        #{
+            static autoPtr<volScalarField> refineField_;
+            if (!refineField_.valid())
+            {
+                // READ_IF_PRESENT/AUTO_WRITE (not the original NO_READ/
+                // NO_WRITE) - registers "refineField" as a real, persistent
+                // field that gets written alongside p/U/k at every write
+                // time and re-read on restart, instead of only ever
+                // existing transiently in memory. Fixes a restart race:
+                // dynamicRefineFvMesh's mesh.update() can ask for
+                // "refineField" on the very first timestep after a process
+                // restart, before this functionObject's codeExecute has
+                // run even once - with NO_READ that lookup failed outright
+                // ("failed lookup of refineField"); with a field already on
+                // disk from the previous run's last write, READ_IF_PRESENT
+                // means it's already in the registry before that can happen.
+                Info<< "Creating refineField_" << nl;
+                refineField_.set
+                (
+                    new volScalarField
+                    (
+                        IOobject
+                        (
+                            "refineField",
+                            mesh().time().timeName(),
+                            mesh(),
+                            IOobject::READ_IF_PRESENT,
+                            IOobject::AUTO_WRITE
+                        ),
+                        mesh(),
+                        dimensionedScalar("refineField", dimPressure, scalar(0.0))
+                    )
+                );
+            }
+
+            const volScalarField& p_ = mesh().lookupObject<volScalarField>("p");
+            const volScalarField& yWall_ = wallDist::New(mesh()).y();
+
+            volScalarField refineFlag
+            (
+                IOobject
+                (
+                    "refineFlag",
+                    mesh().time().timeName(),
+                    mesh(),
+                    IOobject::NO_READ,
+                    IOobject::NO_WRITE
+                ),
+                mesh(),
+                dimensionedScalar("zero", dimless, 0.0)
+            );
+
+            forAll(refineFlag, celli)
+            {
+                refineFlag[celli] = (yWall_[celli] > 0.01) ? 1.0 : 0.0;
+            }
+
+            volScalarField cellSize
+            (
+                IOobject
+                (
+                    "cellSize",
+                    mesh().time().timeName(),
+                    mesh(),
+                    IOobject::NO_READ,
+                    IOobject::NO_WRITE
+                ),
+                mesh(),
+                dimensionedScalar("zero", dimLength, 0.0)
+            );
+            cellSize.primitiveFieldRef() = pow(mesh().V(), 1.0/3.0);
+
+            refineField_() = mag(fvc::grad(p_)) * refineFlag * cellSize;
+        #};
+    }
+
+    // Runs every solver timestep (not tied to writeInterval/purgeWrite) so
+    // logAnalyzer.m's "Force coefficients" mode can read the full
+    // continuous Cd/Cl/Cs history from one postProcessing/forceCoeffs/
+    // folder in one go, instead of needing periodic -forceCoeffs/
+    // -forceCoeffsAll snapshots. Separate from system/forceCoeffsDict
+    // (used standalone by Allsolve -forceCoeffs/-forceCoeffsAll) - kept
+    // independent so changing one doesn't affect the other.
+    forceCoeffs
+    {
+        type            forceCoeffs;
+        libs            (forces);
+        writeControl    timeStep;
+        writeInterval   1;
+
+        patches
+        (
+            nose
+            fuselage
+            bodyFins
+            boosterFins
+        );
+
+        rho         rhoInf;        // use constant freestream density, not a registered rho field
+        rhoInf      0.1714;        // kg/m^3, ISA 15.77 km
+        CofR        (0 0 -0.987);  // midpoint of body length
+        liftDir     (0 1 0);       // +y up
+        dragDir     (0 0 -1);      // opposing +z flight direction
+        pitchAxis   (1 0 0);
+        magUInf     1124.9;        // m/s, Mach 3.8115 at 15.77 km
+        lRef        1.974;         // body length, m
+        Aref        0.0791;        // frontal area pi*(d/2)^2, m^2
+    }
+    // OpenFOAM UI's Stop (the abort function object in this file).
+    #sinclude "../.openfoam-ui/runControl"
+}
+
+
+// OpenFOAM UI's Write Now sends the solver this signal; it then writes
+// its next time step and keeps running.
+// fileModificationSkew 0: a dictionary saved while the solver runs is
+// read at its next time step, however soon after the last change (the
+// default 5 s is for clocks that differ across NFS hosts; one machine here).
+OptimisationSwitches
+{
+    writeNowSignal  10;
+    fileModificationSkew 0;
+}
+
+// ************************************************************************* //

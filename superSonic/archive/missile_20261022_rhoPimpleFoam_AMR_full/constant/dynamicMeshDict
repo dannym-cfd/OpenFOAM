@@ -1,0 +1,76 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2512                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      dynamicMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+//
+// rhoPimpleFoam + AMR, following the OpenFOAM Wiki "AMR supersonic sphere
+// Re300 Ma1dot2 by Michael Alletto" tutorial's mechanism (coded refineField
+// functionObject = mag(grad(p)) * cellSize, wall-layer shielded), adapted:
+//   - kept genuinely transient (this case's own ddtSchemes stays Euler,
+//     fvSolution stays real multi-outer-corrector PIMPLE) instead of the
+//     wiki's steady-state-seeking localEuler/consistent/no-relaxation setup,
+//     since we're tracking real shock/wake unsteadiness, not converging to
+//     a steady answer.
+//   - wall-layer shielding uses actual wall distance (wallDist::New(mesh()).y(),
+//     computed directly in the coded functionObject below) instead of the
+//     wiki's radius-from-origin trick, which only works for a sphere
+//     centred at the origin - not applicable to this elongated body.
+//
+// --------------------------------------------------------------------------- #
+
+dynamicFvMesh      dynamicRefineFvMesh;
+
+refineInterval  100;
+
+maxRefinement   2;
+
+maxCells        8000000;
+
+// Refine on refineField = mag(grad(p)) * Vcell^(1/3), computed each
+// timestep by the coded functionObject in system/controlDict's functions{}
+// (registers "refineField" into the object registry). This scaling by
+// cell size (rather than plain grad(p)) makes the threshold less sensitive
+// to local mesh density than a raw gradient would be - same technique as
+// the referenced tutorial.
+//
+// lowerRefineLevel/upperRefineLevel/unrefineLevel below are a FIRST
+// ESTIMATE, not measured from an actual solved refineField range on this
+// case - the referenced tutorial's own equivalent thresholds (7000/5000)
+// were found "by trial and error" for their case, and ours will need the
+// same. Treat these as a starting point: run briefly, check the actual
+// refineField value range that appears (e.g. via paraview or logging its
+// min/max), and retune.
+field           refineField;
+
+lowerRefineLevel 500;
+upperRefineLevel 1e20;
+unrefineLevel    100;
+
+nBufferLayers   1;
+
+dumpLevel       true;
+
+// phi (mass flux) and rho are the two flux-adjacent fields confirmed
+// registered for a compressible rhoPimpleFoam case. "none" = skip
+// velocity-based reinterpolation on newly split faces and let the mesh
+// refinement's default face-splitting handle it - the solver's own next
+// flux calculation overwrites these immediately anyway (same safe-default
+// choice used for the sonicFoam AMR attempt).
+correctFluxes
+(
+    (phi none)
+    (rho none)
+);
+
+// ************************************************************************* //

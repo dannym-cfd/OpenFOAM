@@ -1,0 +1,240 @@
+#!/bin/bash
+cd "${0%/*}" || exit 1
+
+. /usr/lib/openfoam/openfoam2606/etc/bashrc 2>/dev/null
+
+# 9950X3D: 16 physical / 32 logical (SMT) cores. CPU-only solve here (no
+# GPU/AmgX contention like racecarAero), so pushed past physical count to
+# 30 as a deliberate choice - accepting some SMT contention in exchange for
+# more parallelism, unlike the physical-core-only convention used elsewhere.
+NPROCS=30
+
+# --------------------------------------------------------------------------- #
+mkdir -p log
+
+TS=$(date '+%Y%m%d_%H%M%S')
+
+log() { echo "[$(date '+%H:%M:%S')] $*"; }
+
+# Auto-pops the solver's live log view in MATLAB (no need to have MATLAB or
+# logAnalyzer already running) - see popup_log_window() in that file.
+source ~/bin/matlab_popup_functions.sh 2>/dev/null
+
+run()
+{
+    local app=$1; shift
+    log "Running $app $*"
+    mkdir -p "log/$app"
+    $app "$@" 2>&1 | tee "log/$app/${app}_${TS}.log"
+    local rc=${PIPESTATUS[0]}
+    [ $rc -ne 0 ] && { log "ERROR: $app failed (exit $rc)"; exit $rc; }
+}
+
+clean_identifiers()
+{
+    log "Removing Zone.Identifier files..."
+    find . -name '*:Zone.Identifier' -delete
+}
+
+# Reads the actual solver to run from system/controlDict's "application"
+# entry, instead of hardcoding one - this case has been switched between
+# sonicFoam and rhoPimpleFoam (for AMR support), and a hardcoded solver here
+# silently ran the WRONG one (sonicFoam, no AMR) on a restart after the
+# switch to rhoPimpleFoam, since nothing checked controlDict at all.
+get_application()
+{
+    awk '/^application/{gsub(";","",$2); print $2; exit}' system/controlDict
+}
+
+run_solver()
+{
+    local app
+    app=$(get_application)
+    log "Running $app on $NPROCS procs..."
+    mkdir -p "log/$app"
+    popup_log_window "$(pwd)/log/$app/${app}_${TS}.log"
+    mpirun --use-hwthread-cpus -np $NPROCS "$app" -parallel 2>&1 | tee "log/$app/${app}_${TS}.log"
+    local rc=${PIPESTATUS[0]}
+    [ $rc -ne 0 ] && { log "ERROR: $app failed (exit $rc)"; exit $rc; }
+    touch data.foam
+    log "Done"
+}
+
+print_usage()
+{
+    cat <<'EOF'
+Usage: ./Allsolve [flags]
+
+No flags: does nothing but print this. There is no implicit cold-start -
+run one of the flags below (typically -cold to start fresh).
+
+  -cold            Cold start: cleans processor/time dirs, decomposePar,
+                   run the solver named in system/controlDict's
+                   "application" entry from t=0.
+  -latestTime      Continue solving from the latest existing time.
+  -t<time>         Continue from a specific timestep, e.g. -t1677, -t0.
+  -solver          Just run the solver, nothing else (assumes already
+                   decomposed).
+  -forceCoeffs     Compute force/moment coefficients at the LATEST time
+                   only, via <solver> -postProcess -latestTime.
+  -forceCoeffsAll  Compute force/moment coefficients over EVERY currently-
+                   retained time directory (no -latestTime), producing one
+                   coefficient.dat/force.dat/moment.dat with a row per
+                   timestep still on disk (older times already deleted by
+                   purgeWrite are not recoverable). Readable by
+                   logAnalyzer.m's "Force coefficients (test/ folder)" mode.
+  -export          Reconstruct decomposed time directories, touch data.foam
+                   for ParaView.
+  -stop            Request a clean shutdown of an already-running solve
+                   (stopAt writeNow) - use this instead of Ctrl+C.
+EOF
+}
+
+# --------------------------------------------------------------------------- #
+# Parse flags
+# --------------------------------------------------------------------------- #
+cold_start=false
+solver_only=false
+latest_time=false
+force_coeffs=false
+force_coeffs_all=false
+export_only=false
+stop_gracefully=false
+start_time=""
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        -cold)           cold_start=true ;;
+        -solver)         solver_only=true ;;
+        -latestTime)     latest_time=true ;;
+        -forceCoeffs)    force_coeffs=true ;;
+        -forceCoeffsAll) force_coeffs_all=true ;;
+        -export)         export_only=true ;;
+        -stop)           stop_gracefully=true ;;
+        -t*)             start_time="${1#-t}" ;;
+        -help|--help|-h) print_usage; exit 0 ;;
+        *) echo "Unknown flag: $1"; exit 1 ;;
+    esac
+    shift
+done
+
+# --------------------------------------------------------------------------- #
+# -stop: request a clean shutdown of an ALREADY-RUNNING solve instead of
+# Ctrl+C. Flips stopAt to writeNow in controlDict (runTimeModifiable is on,
+# so the running solver picks this up), letting it finish the current
+# timestep, write results, and exit cleanly.
+# --------------------------------------------------------------------------- #
+if [ "$stop_gracefully" = true ]; then
+    sed -i 's/^stopAt.*/stopAt          writeNow;/' system/controlDict
+    log "stopAt set to writeNow - solver will finish its current timestep, write, and exit cleanly"
+    log "(this can take a little while if mid-timestep - don't Ctrl+C, let it finish)"
+    exit 0
+fi
+
+# --------------------------------------------------------------------------- #
+# -export: reconstruct all decomposed time directories, then touch data.foam
+# --------------------------------------------------------------------------- #
+if [ "$export_only" = true ]; then
+    clean_identifiers
+    run reconstructPar
+    touch data.foam
+    log "Reconstructed — data.foam ready for ParaView"
+    exit 0
+fi
+
+# --------------------------------------------------------------------------- #
+# -forceCoeffs: run via <solver> -postProcess (builds full physics stack,
+# including turbulence model, needed for viscous force contribution — the
+# generic postProcess utility can't construct that on its own). Latest time
+# only - one-row snapshot.
+# --------------------------------------------------------------------------- #
+if [ "$force_coeffs" = true ]; then
+    clean_identifiers
+    app=$(get_application)
+    log "Running forceCoeffs via $app -postProcess -latestTime..."
+    mkdir -p log/forceCoeffs
+    mpirun --use-hwthread-cpus -np $NPROCS "$app" -postProcess -parallel -latestTime -dict system/forceCoeffsDict 2>&1 | tee "log/forceCoeffs/forceCoeffs_${TS}.log"
+    local rc=${PIPESTATUS[0]}
+    [ $rc -ne 0 ] && { log "ERROR: forceCoeffs failed (exit $rc)"; exit $rc; }
+    log "Results in postProcessing/forceCoeffs/"
+    exit 0
+fi
+
+# --------------------------------------------------------------------------- #
+# -forceCoeffsAll: same as -forceCoeffs but WITHOUT -latestTime, so
+# postProcess reprocesses every time directory still on disk into one
+# coefficient.dat/force.dat/moment.dat with a row per timestep.
+# --------------------------------------------------------------------------- #
+if [ "$force_coeffs_all" = true ]; then
+    clean_identifiers
+    app=$(get_application)
+    log "Running forceCoeffs via $app -postProcess over all retained time directories..."
+    mkdir -p log/forceCoeffs
+    mpirun --use-hwthread-cpus -np $NPROCS "$app" -postProcess -parallel -dict system/forceCoeffsDict 2>&1 | tee "log/forceCoeffs/forceCoeffsAll_${TS}.log"
+    local rc=${PIPESTATUS[0]}
+    [ $rc -ne 0 ] && { log "ERROR: forceCoeffs (all times) failed (exit $rc)"; exit $rc; }
+    log "Results in postProcessing/forceCoeffs/ (one row per retained time directory)"
+    exit 0
+fi
+
+if [ "$solver_only" = true ]; then
+    clean_identifiers
+    sed -i 's/^stopAt.*/stopAt          endTime;/' system/controlDict
+    run_solver
+    exit 0
+fi
+
+# --------------------------------------------------------------------------- #
+# -tXXXX: restart from a specific timestep (e.g. -t1677, -t0)
+# --------------------------------------------------------------------------- #
+if [ -n "$start_time" ]; then
+    if [ ! -d "processor0/$start_time" ]; then
+        log "ERROR: timestep '$start_time' not found"
+        log "Available timesteps:"
+        ls -d processor0/*/ 2>/dev/null | xargs -n1 basename | grep -E '^[0-9]' | sort -g
+        exit 1
+    fi
+    clean_identifiers
+    sed -i 's/^startFrom.*/startFrom       startTime;/' system/controlDict
+    sed -i "s/^startTime.*/startTime       $start_time;/" system/controlDict
+    sed -i 's/^stopAt.*/stopAt          endTime;/' system/controlDict
+    log "startFrom set to startTime=$start_time, stopAt reset to endTime"
+    run_solver
+    exit 0
+fi
+
+# --------------------------------------------------------------------------- #
+# -latestTime: restart from latest time in existing processor dirs
+# --------------------------------------------------------------------------- #
+if [ "$latest_time" = true ]; then
+    clean_identifiers
+    sed -i 's/^startFrom.*/startFrom       latestTime;/' system/controlDict
+    sed -i 's/^stopAt.*/stopAt          endTime;/' system/controlDict
+    log "startFrom set to latestTime, stopAt reset to endTime"
+    run_solver
+    exit 0
+fi
+
+# --------------------------------------------------------------------------- #
+# -cold: full clean+decompose+solve workflow, starting fresh from t=0.
+# --------------------------------------------------------------------------- #
+if [ "$cold_start" = true ]; then
+    clean_identifiers
+    sed -i 's/^startFrom.*/startFrom       startTime;/' system/controlDict
+    sed -i 's/^startTime.*/startTime       0;/' system/controlDict
+    sed -i 's/^stopAt.*/stopAt          endTime;/' system/controlDict
+    log "startFrom/startTime reset to 0, stopAt reset to endTime for cold start"
+
+    log "Cleaning old processor and solution time directories..."
+    rm -rf processor*/
+    find . -maxdepth 1 -regextype posix-extended -regex '\./[0-9]+(\.[0-9]+)?(e[+-]?[0-9]+)?' ! -name '0' -exec rm -rf {} +
+
+    run decomposePar
+    run_solver
+    exit 0
+fi
+
+# --------------------------------------------------------------------------- #
+# No flags at all: do nothing destructive - just print the available flags.
+# --------------------------------------------------------------------------- #
+print_usage

@@ -1,0 +1,158 @@
+#!/bin/bash
+cd "${0%/*}" || exit 1
+
+# Sources whichever OpenFOAM version is actually installed rather than a
+# hardcoded release number, so this template works unmodified on a
+# different install.
+for bashrc in /usr/lib/openfoam/openfoam*/etc/bashrc; do
+    . "$bashrc" 2>/dev/null && break
+done
+
+# Overridable via NPROCS env var (openfoam-ui's processor-count dropdown
+# sets this).
+NPROCS="${NPROCS:-12}"
+
+# --------------------------------------------------------------------------- #
+mkdir -p log
+
+TS=$(date '+%Y%m%d_%H%M%S')
+
+log() { echo "[$(date '+%H:%M:%S')] $*"; }
+
+run()
+{
+    local app=$1; shift
+    log "Running $app $*"
+    mkdir -p "log/$app"
+    $app "$@" 2>&1 | tee "log/$app/${app}_${TS}.log"
+    local rc=${PIPESTATUS[0]}
+    [ $rc -ne 0 ] && { log "ERROR: $app failed (exit $rc)"; exit $rc; }
+}
+
+clean_identifiers()
+{
+    log "Removing Zone.Identifier files..."
+    find . -name '*:Zone.Identifier' -delete
+}
+
+run_snappy()
+{
+    log "Running snappyHexMesh on $NPROCS procs..."
+    mkdir -p log/snappyHexMesh
+    mpirun --use-hwthread-cpus -np $NPROCS snappyHexMesh -parallel -overwrite 2>&1 | tee "log/snappyHexMesh/snappyHexMesh_${TS}.log"
+    local rc=${PIPESTATUS[0]}
+    [ $rc -ne 0 ] && { log "ERROR: snappyHexMesh failed (exit $rc)"; exit $rc; }
+}
+
+run_checkmesh()
+{
+    log "Running checkMesh..."
+    mkdir -p log/checkMesh
+    checkMesh 2>&1 | tee "log/checkMesh/checkMesh_${TS}.log"
+    local rc=${PIPESTATUS[0]}
+    # checkMesh exits 0 even when it reports "Failed N mesh checks", so the
+    # verdict is read from its own summary line, not the exit code.
+    local failed
+    failed=$(grep -oE "Failed [0-9]+ mesh checks" "log/checkMesh/checkMesh_${TS}.log" | tail -1)
+    if [ $rc -ne 0 ] || [ -n "$failed" ]; then
+        log "WARNING: checkMesh: ${failed:-reported errors} - see log/checkMesh/checkMesh_${TS}.log before solving"
+    else
+        log "checkMesh: no failed checks"
+    fi
+}
+
+print_usage()
+{
+    cat <<'EOF'
+Usage: ./Allmesh [flags]
+
+No flags: does nothing but print this. There is no implicit full run -
+pass -run for the full pipeline, or -mesh to just re-snap an existing mesh.
+
+  -run    Full pipeline: cleans old mesh/processor dirs, blockMesh,
+          surfaceFeatureExtract, decomposePar, snappyHexMesh (parallel),
+          reconstructParMesh, checkMesh, touch mesh.foam.
+  -mesh   Just re-run snappyHexMesh on an existing decomposed blockMesh
+          (skips blockMesh/surfaceFeatureExtract/decomposePar), then
+          reconstructParMesh + checkMesh.
+EOF
+}
+
+# --------------------------------------------------------------------------- #
+# Parse flags
+# --------------------------------------------------------------------------- #
+mesh_only=false
+full_run=false
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        -mesh) mesh_only=true ;;
+        -run)  full_run=true ;;
+        *) echo "Unknown flag: $1"; exit 1 ;;
+    esac
+    shift
+done
+
+# --------------------------------------------------------------------------- #
+# -mesh: just run snappyHexMesh on existing decomposed blockMesh
+# --------------------------------------------------------------------------- #
+if [ "$mesh_only" = true ]; then
+    clean_identifiers
+    run_snappy
+    run reconstructParMesh -constant
+    # cellZones made by topoSet (MRF zones, porous regions) live in the mesh
+    # and go with it; without this a re-meshed case stops the solve at
+    # "cannot find MRF cellZone".
+    [ -f system/topoSetDict ] && run topoSet
+    run_checkmesh
+    log "Done — mesh in constant/polyMesh"
+    exit 0
+fi
+
+# --------------------------------------------------------------------------- #
+# -run: full workflow
+# --------------------------------------------------------------------------- #
+if [ "$full_run" = true ]; then
+    clean_identifiers
+
+    log "Cleaning old mesh and processor files..."
+    rm -rf processor*/
+    rm -rf constant/polyMesh/
+    rm -rf constant/extendedFeatureEdgeMesh/
+    rm -f  constant/triSurface/*.eMesh
+
+    run blockMesh
+    run surfaceFeatureExtract
+
+    # Keeps decomposePar's own numberOfSubdomains in sync with $NPROCS -
+    # without this, whatever was last written to decomposeParDict (by hand,
+    # or by a previous run at a different proc count) silently wins, and
+    # mpirun then launches $NPROCS ranks against a mesh actually split into
+    # a different number of pieces. That mismatch is exactly what produces
+    # cryptic parallel crashes deep in snappyHexMesh (motionSmoother/
+    # twoDPointCorrector "cannot determine normal vector from patches"
+    # among them) rather than a clear "wrong number of processors" error.
+    sed -i "s/^numberOfSubdomains.*/numberOfSubdomains ${NPROCS};/" system/decomposeParDict
+    # -no-fields: only the mesh. 0/ holds fields for the FINISHED mesh's
+    # patches; against this background mesh decomposePar stops at "Cannot
+    # find patchField entry for walls" on every re-mesh of a solved case.
+    run decomposePar -no-fields
+
+    run_snappy
+
+    run reconstructParMesh -constant
+    # cellZones made by topoSet (MRF zones, porous regions) live in the mesh
+    # and go with it; without this a re-meshed case stops the solve at
+    # "cannot find MRF cellZone".
+    [ -f system/topoSetDict ] && run topoSet
+    run_checkmesh
+
+    touch mesh.foam
+    log "Done — mesh in constant/polyMesh"
+    exit 0
+fi
+
+# --------------------------------------------------------------------------- #
+# No flags at all: do nothing destructive - just print the available flags.
+# --------------------------------------------------------------------------- #
+print_usage

@@ -1,0 +1,35 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      fvOptions;
+}
+
+// The three limits superSonic runs with; bounds for M0.7 at sea level.
+
+limitU
+{
+    type            limitVelocity;
+    active          yes;
+    selectionMode   all;
+    max             500;        // m/s - about 2x U_inf
+}
+
+limitT
+{
+    type            limitTemperature;
+    active          yes;
+    selectionMode   all;
+    min             150;        // K - well below T_inf 288 K
+    max             500;        // K - well above T_stag 316 K
+}
+
+limitNut
+{
+    type            limitTurbulenceViscosity;
+    active          yes;
+    selectionMode   all;
+    max             1.0;        // m^2/s - as superSonic
+}

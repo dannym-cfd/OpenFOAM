@@ -1,0 +1,64 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      fvSolution;
+}
+
+// Copied from superSonic (rhoPimpleFoam LTS).
+
+solvers
+{
+    "rho.*"
+    {
+        solver          diagonal;
+    }
+
+    "p.*"
+    {
+        solver          GAMG;
+        smoother        GaussSeidel;
+        tolerance       1e-9;
+        relTol          0.01;
+    }
+
+    "(U|e).*"
+    {
+        $p;
+        tolerance       1e-9;
+    }
+
+    "(k|epsilon).*"
+    {
+        $p;
+        tolerance       1e-10;
+    }
+}
+
+PIMPLE
+{
+    transonic       yes;
+    pMinFactor      0.1;
+    pMaxFactor      4;
+    nOuterCorrectors 1;
+    nCorrectors      2;
+    nNonOrthogonalCorrectors 1;
+    maxCo           0.3;
+    rDeltaTSmoothingCoeff 0.05;
+    rDeltaTDampingCoeff 0.5;
+    maxDeltaT       1;
+}
+
+relaxationFactors
+{
+    fields
+    {
+        p               0.5;
+    }
+    equations
+    {
+        ".*"            0.7;
+    }
+}

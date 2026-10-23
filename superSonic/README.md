@@ -411,4 +411,19 @@ consistent with the ideal gas relation between the three fields.*
 > ascent trajectory model, not picked as a round test number — the result
 > reflects a specific point in a modeled flight profile.
 
+## Follow-up Cases
+
+- **Fine-mesh `rhoPimpleFoam` with adaptive refinement**
+  ([`archive/missile_20261022_rhoPimpleFoam_AMR_full`](archive/missile_20261022_rhoPimpleFoam_AMR_full/)):
+  the same Mach 3.8115 condition re-solved with local time stepping,
+  `realizableKE`, and `dynamicRefineFvMesh` (refining every 100 iterations,
+  capped at 8M cells), initialized by mapping the coarse solution onto the
+  fine mesh. Cd **0.0305** at iteration 17804, within 2% of the `sonicFoam`
+  result, with lift, side force and moments still at 10⁻⁶–10⁻⁵. The mapped
+  `0.orig` fields are gzipped (OpenFOAM reads `.gz` fields directly); force
+  and residual histories are in `postProcessing/`.
+- **Top stage wing-sweep study** ([`topStage/`](topStage/)): the glide
+  stage on its own at Mach 0.70 with the wings at 0°, 20°, 40°, 60° and
+  86° sweep.
+
 [← Back to all projects](../README.md) · [Race Car Aero](../racecarAero/)

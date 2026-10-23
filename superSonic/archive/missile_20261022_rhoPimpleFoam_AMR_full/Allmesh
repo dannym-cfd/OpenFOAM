@@ -1,0 +1,137 @@
+#!/bin/bash
+cd "${0%/*}" || exit 1
+
+. /usr/lib/openfoam/openfoam2606/etc/bashrc 2>/dev/null
+
+# 9950X3D: 16 physical / 32 logical (SMT) cores - pushed to 30 (near-full
+# logical thread count) as a deliberate choice for this CPU-only case.
+NPROCS=30
+
+# --------------------------------------------------------------------------- #
+mkdir -p log
+
+TS=$(date '+%Y%m%d_%H%M%S')
+
+log() { echo "[$(date '+%H:%M:%S')] $*"; }
+
+# Auto-pops the mesh refinement/layers results in MATLAB once meshing
+# finishes (no need to have MATLAB or logAnalyzer already running) - see
+# popup_mesh_results() in that file.
+source ~/bin/matlab_popup_functions.sh 2>/dev/null
+
+run()
+{
+    local app=$1; shift
+    log "Running $app $*"
+    mkdir -p "log/$app"
+    $app "$@" 2>&1 | tee "log/$app/${app}_${TS}.log"
+    local rc=${PIPESTATUS[0]}
+    [ $rc -ne 0 ] && { log "ERROR: $app failed (exit $rc)"; exit $rc; }
+}
+
+clean_identifiers()
+{
+    log "Removing Zone.Identifier files..."
+    find . -name '*:Zone.Identifier' -delete
+}
+
+run_snappy()
+{
+    log "Running snappyHexMesh on $NPROCS procs..."
+    mkdir -p log/snappyHexMesh
+    mpirun --use-hwthread-cpus -np $NPROCS snappyHexMesh -parallel -overwrite 2>&1 | tee "log/snappyHexMesh/snappyHexMesh_${TS}.log"
+    local rc=${PIPESTATUS[0]}
+    [ $rc -ne 0 ] && { log "ERROR: snappyHexMesh failed (exit $rc)"; exit $rc; }
+}
+
+run_checkmesh()
+{
+    log "Running checkMesh..."
+    mkdir -p log/checkMesh
+    checkMesh 2>&1 | tee "log/checkMesh/checkMesh_${TS}.log"
+    local rc=${PIPESTATUS[0]}
+    if [ $rc -ne 0 ]; then
+        log "WARNING: checkMesh reported failed checks - see log/checkMesh/checkMesh_${TS}.log before solving"
+    else
+        log "checkMesh: no failed checks"
+    fi
+}
+
+print_usage()
+{
+    cat <<'EOF'
+Usage: ./Allmesh [flags]
+
+No flags: does nothing but print this. There is no implicit full run -
+pass -run for the full pipeline, or -mesh to just re-snap an existing mesh.
+
+  -run    Full pipeline: cleans old mesh/processor dirs, blockMesh,
+          surfaceFeatureExtract, decomposePar, snappyHexMesh (parallel),
+          reconstructParMesh, checkMesh, touch mesh.foam.
+  -mesh   Just re-run snappyHexMesh on an existing decomposed blockMesh
+          (skips blockMesh/surfaceFeatureExtract/decomposePar), then
+          reconstructParMesh + checkMesh.
+EOF
+}
+
+# --------------------------------------------------------------------------- #
+# Parse flags
+# --------------------------------------------------------------------------- #
+mesh_only=false
+full_run=false
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        -mesh) mesh_only=true ;;
+        -run)  full_run=true ;;
+        *) echo "Unknown flag: $1"; exit 1 ;;
+    esac
+    shift
+done
+
+# --------------------------------------------------------------------------- #
+# -mesh: just run snappyHexMesh on existing decomposed blockMesh
+# --------------------------------------------------------------------------- #
+if [ "$mesh_only" = true ]; then
+    clean_identifiers
+    run_snappy
+    run reconstructParMesh -constant
+    [ -f system/topoSetDict ] && run topoSet
+    run_checkmesh
+    popup_mesh_results "$(pwd)/log/snappyHexMesh/snappyHexMesh_${TS}.log"
+    log "Done — mesh in constant/polyMesh"
+    exit 0
+fi
+
+# --------------------------------------------------------------------------- #
+# -run: full workflow
+# --------------------------------------------------------------------------- #
+if [ "$full_run" = true ]; then
+    clean_identifiers
+
+    log "Cleaning old mesh and processor files..."
+    rm -rf processor*/
+    rm -rf constant/polyMesh/
+    rm -rf constant/extendedFeatureEdgeMesh/
+    rm -f  constant/triSurface/*.eMesh
+
+    run blockMesh
+    run surfaceFeatureExtract
+    run decomposePar -no-fields
+
+    run_snappy
+
+    run reconstructParMesh -constant
+    [ -f system/topoSetDict ] && run topoSet
+    run_checkmesh
+    popup_mesh_results "$(pwd)/log/snappyHexMesh/snappyHexMesh_${TS}.log"
+
+    touch mesh.foam
+    log "Done — mesh in constant/polyMesh"
+    exit 0
+fi
+
+# --------------------------------------------------------------------------- #
+# No flags at all: do nothing destructive - just print the available flags.
+# --------------------------------------------------------------------------- #
+print_usage

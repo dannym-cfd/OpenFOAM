@@ -1,0 +1,49 @@
+#!/bin/bash
+cd "${0%/*}" || exit 1
+
+log() { echo "[$(date '+%H:%M:%S')] $*"; }
+
+# --------------------------------------------------------------------------- #
+# Parse flags
+# --------------------------------------------------------------------------- #
+clear_mesh=false
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        -mesh) clear_mesh=true ;;
+        *) echo "Unknown flag: $1"; exit 1 ;;
+    esac
+    shift
+done
+
+# --------------------------------------------------------------------------- #
+# Clear simulation data
+# --------------------------------------------------------------------------- #
+log "Removing processor directories..."
+rm -rf processor*/
+
+log "Removing solved time directories (keeping 0/ and 0.orig/)..."
+find . -maxdepth 1 -regextype posix-extended -regex '\./[0-9]+(\.[0-9]+)?(e[+-]?[0-9]+)?' ! -name '0' -exec rm -rf {} +
+
+log "Removing postProcessing results..."
+rm -rf postProcessing/
+
+log "Removing foam state files..."
+rm -f data.foam mesh.foam
+
+log "Removing Zone.Identifier files..."
+find . -name '*:Zone.Identifier' -delete
+
+# --------------------------------------------------------------------------- #
+# -mesh: also clear the generated mesh, forcing a full remesh
+# --------------------------------------------------------------------------- #
+if [ "$clear_mesh" = true ]; then
+    log "Removing mesh (constant/polyMesh, feature edges, eMesh files)..."
+    rm -rf constant/polyMesh/
+    rm -rf constant/extendedFeatureEdgeMesh/
+    rm -f  constant/triSurface/*.eMesh
+    log "Removing 0/ (restore from 0.orig/ via Allsolve before next run)..."
+    rm -rf 0/
+fi
+
+log "Done"

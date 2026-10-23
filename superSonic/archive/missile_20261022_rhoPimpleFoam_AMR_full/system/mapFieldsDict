@@ -1,0 +1,5 @@
+FoamFile { version 2.0; format ascii; class dictionary; object mapFieldsDict; }
+// Same patches on both meshes; only the interior is mapped, the boundary
+// conditions stay as this case sets them.
+patchMap        ();
+cuttingPatches  ();

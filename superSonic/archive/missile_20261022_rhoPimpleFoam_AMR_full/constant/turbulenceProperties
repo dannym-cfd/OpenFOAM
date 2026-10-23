@@ -1,0 +1,37 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2606                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      turbulenceProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+simulationType          RAS;
+
+RAS
+{
+    // realizableKE: a high-Re model, matched to this case's existing wall
+    // functions (nutkWallFunction/kqRWallFunction/epsilonWallFunction in
+    // 0/nut,k,epsilon) - unlike the previous LaunderSharmaKE, which is a
+    // LOW-Re model whose own near-wall damping functions expect direct
+    // integration to the wall (y+~1), not a wall-function bridge. Keeps the
+    // same k/epsilon transport fields and BC types, so no field/BC changes
+    // needed - just the model itself. Preferred over standard kEpsilon for
+    // external aero (streamline curvature, separation around the fins).
+    RASModel            realizableKE;
+
+    turbulence          on;
+
+    printCoeffs         on;
+}
+
+
+// ************************************************************************* //
